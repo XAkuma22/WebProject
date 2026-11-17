@@ -1,0 +1,543 @@
+<!-- adminhistory.html -->
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Passion Fruit Support Ticket Archives">
+  <meta name="color-scheme" content="dark light">
+  <title>Ticket Archives – Passion Fruit Support</title>
+  <link rel="icon" href="logo.png" type="image/png">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    :root {
+      --bg-main: #0b0f17;
+      --bg-card: #121824;
+      --bg-card-hover: #182030;
+      --border-color: #1f293d;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --accent-blue: #3b82f6;
+      --accent-blue-glow: rgba(59, 130, 246, 0.25);
+      --sidebar-width: 250px;
+    }
+
+    [data-theme="light"] {
+      --bg-main: #f4f5f7;
+      --bg-card: #ffffff;
+      --bg-card-hover: #f9fafb;
+      --border-color: #e5e7eb;
+      --text-main: #111827;
+      --text-muted: #6b7280;
+      --accent-blue: #0071e3;
+      --accent-blue-glow: rgba(0, 113, 227, 0.2);
+    }
+    
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: radial-gradient(ellipse 120% 85% at 30% 0%, rgba(59, 130, 246, 0.14) 0%, transparent 80%), var(--bg-main) !important;
+      background-attachment: fixed;
+      font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif);
+      color: var(--text-main);
+      min-height: 100vh;
+      scrollbar-gutter: stable;
+      -webkit-font-smoothing: antialiased;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    [data-theme="light"] html, [data-theme="light"] body {
+      background: radial-gradient(ellipse 120% 85% at 30% 0%, rgba(0, 113, 227, 0.09) 0%, transparent 85%), var(--bg-main) !important;
+      background-attachment: fixed;
+    }
+
+    .admin-sidebar {
+      width: var(--sidebar-width);
+      background: var(--bg-card) !important;
+      border: 1px solid var(--border-color) !important;
+      border-radius: 20px;
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 16px;
+      bottom: 16px;
+      left: 16px;
+      z-index: 100;
+      padding: 20px 16px;
+      box-sizing: border-box;
+      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.16), 0 0 0 1px var(--border-color);
+    }
+
+    .admin-sidebar__brand-row {
+      display: flex;
+      align-items: center;
+      padding: 0 8px 20px 8px;
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 16px;
+    }
+
+    .admin-sidebar__brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: var(--text-main);
+      font-weight: 700;
+      font-size: 1.15rem;
+      letter-spacing: -0.02em;
+      white-space: nowrap;
+    }
+
+    .admin-sidebar__brand img {
+      width: 28px;
+      height: 28px;
+      object-fit: contain;
+    }
+
+    .admin-nav-section {
+      margin-bottom: 24px;
+    }
+
+    .admin-nav-title {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      padding: 0 12px 8px 12px;
+      font-weight: 700;
+    }
+
+    .admin-nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      text-decoration: none;
+      color: var(--text-muted);
+      font-weight: 500;
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
+      margin-bottom: 2px;
+      background: transparent;
+      border: none;
+      width: 100%;
+      cursor: pointer;
+      text-align: left;
+      font-family: inherit;
+    }
+
+    .admin-nav-item:hover {
+      background: var(--bg-card-hover);
+      color: var(--text-main);
+    }
+
+    .admin-nav-item.active {
+      background: var(--bg-main);
+      color: var(--text-main);
+      font-weight: 600;
+      border: 1px solid var(--border-color);
+    }
+
+    .nav-badge {
+      font-size: 0.72rem;
+      background: var(--border-color);
+      padding: 2px 7px;
+      border-radius: 10px;
+      color: var(--text-muted);
+      margin-left: auto;
+    }
+
+    .admin-wrapper {
+      margin-left: 282px;
+      width: calc(100% - 282px);
+      min-height: 100vh;
+      background: transparent !important;
+      padding: 20px 36px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .admin-topbar {
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 28px;
+      gap: 20px;
+    }
+
+    .search-task-bar {
+      display: flex;
+      align-items: center;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 8px 16px;
+      flex-grow: 1;
+      margin: 0 16px;
+      gap: 12px;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      box-sizing: border-box;
+      transition: border-color 0.2s;
+    }
+
+    .search-task-bar:focus-within {
+      border-color: var(--accent-blue);
+    }
+
+    .search-task-bar input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text-main);
+      font-size: 0.9rem;
+      width: 100%;
+      font-family: inherit;
+    }
+
+    .shortcut-badge {
+      background: var(--border-color);
+      border-radius: 6px;
+      padding: 2px 6px;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      font-family: monospace;
+      flex-shrink: 0;
+    }
+
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .icon-btn {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .icon-btn:hover {
+      background: var(--bg-card-hover);
+      color: var(--text-main);
+      border-color: var(--accent-blue);
+    }
+
+    .user-profile-pill {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      padding: 5px 14px 5px 5px;
+      border-radius: 30px;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+
+    .user-profile-pill:hover {
+      border-color: var(--accent-blue);
+    }
+
+    .user-avatar {
+      width: 32px;
+      height: 32px;
+      background: var(--accent-blue);
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+
+    .user-meta .name {
+      font-weight: 600;
+      font-size: 0.84rem;
+      color: var(--text-main);
+      line-height: 1.2;
+    }
+
+    .user-meta .role {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      line-height: 1.2;
+    }
+
+    .dashboard-title-area {
+      margin-bottom: 24px;
+    }
+
+    .dashboard-title-area h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      margin: 0 0 4px 0;
+      letter-spacing: -0.03em;
+    }
+
+    .dashboard-title-area p {
+      color: var(--text-muted);
+      margin: 0;
+      font-size: 0.92rem;
+    }
+
+    .dash-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 18px;
+      padding: 24px;
+      box-sizing: border-box;
+      width: 100%;
+    }
+
+    .queue-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .queue-table th, .queue-table td {
+      padding: 16px 20px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-color);
+      font-size: 0.9rem;
+    }
+    .queue-table th {
+      background: var(--bg-main);
+      font-weight: 700;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      border-radius: 8px;
+    }
+    .queue-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    @media(max-width: 900px) {
+      .admin-sidebar { display: none; }
+      .admin-wrapper { margin-left: 0; width: 100% !important; padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+  <aside class="admin-sidebar" id="adminSidebar">
+    <div class="admin-sidebar__brand-row">
+      <a class="admin-sidebar__brand" href="adminpage.html">
+        <img src="images/logo.png" alt="Logo">
+        <span>Passion Fruit</span>
+      </a>
+    </div>
+
+    <div class="admin-nav-section">
+      <div class="admin-nav-title">Menu</div>
+      <a class="admin-nav-item" href="adminpage.html">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+        <span>Dashboard</span>
+      </a>
+      <a class="admin-nav-item" href="adminqueue.html">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+        <span>Support Queue</span>
+        <span class="nav-badge" id="sidebarQueueBadge">0</span>
+      </a>
+      <a class="admin-nav-item" href="adminchat.html">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z"/></svg>
+        <span>Live Chat</span>
+        <span class="nav-badge" style="background: rgba(52,199,89,0.15); color: #34c759;" id="sidebarActiveBadge">0</span>
+      </a>
+      <a class="admin-nav-item active" href="adminhistory.html">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+        <span>Archives</span>
+      </a>
+    </div>
+  </aside>
+
+  <div class="admin-wrapper">
+    <header class="admin-topbar">
+      <div class="search-task-bar">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input type="text" id="adminSearchInput" placeholder="Search task or tickets...">
+        <span class="shortcut-badge">⌘K</span>
+      </div>
+
+      <div class="topbar-actions">
+        <button type="button" data-theme-toggle class="icon-btn" aria-label="Toggle theme">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+        </button>
+
+        <div style="position: relative;">
+          <div class="user-profile-pill" id="adminProfileTrigger">
+            <div class="user-avatar">A</div>
+            <div class="user-meta">
+              <div class="name">System Admin</div>
+              <div class="role">admin@passionfruit.com</div>
+            </div>
+          </div>
+
+          <div id="adminProfileDropdown" hidden style="position: absolute; right: 0; top: 50px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; width: 240px; box-shadow: 0 16px 40px rgba(0,0,0,0.3); padding: 14px; z-index: 1000;">
+            <div style="padding-bottom: 10px; border-bottom: 1px solid var(--border-color); margin-bottom: 8px;">
+              <div style="font-weight: 700; font-size: 0.9rem;">System Admin</div>
+              <div style="font-size: 0.78rem; color: var(--text-muted);">admin@passionfruit.com</div>
+            </div>
+            <a href="adminpage.html" style="display: block; padding: 8px 10px; color: var(--text-main); text-decoration: none; font-size: 0.85rem; border-radius: 8px;" onmouseover="this.style.background='var(--bg-card-hover)'" onmouseout="this.style.background='transparent'">Dashboard home</a>
+            <div style="border-top: 1px solid var(--border-color); margin-top: 6px; padding-top: 6px;">
+              <button type="button" id="popoverLogoutBtn" style="width: 100%; text-align: left; background: transparent; border: none; padding: 8px 10px; color: #ef4444; font-size: 0.85rem; font-weight: 600; border-radius: 8px; cursor: pointer;" onmouseover="this.style.background='var(--bg-card-hover)'" onmouseout="this.style.background='transparent'">Log out</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="dashboard-title-area">
+      <h1>Ticket Archives</h1>
+      <p>Review and manage resolved and transferred customer histories.</p>
+    </div>
+
+    <div class="dash-box">
+      <table class="queue-table">
+        <thead>
+          <tr>
+            <th>Ticket ID</th>
+            <th>Customer</th>
+            <th>Subject / Issue</th>
+            <th>Status</th>
+            <th>Resolved At</th>
+          </tr>
+        </thead>
+        <tbody id="queueTableBody">
+          <!-- Dynamically populated -->
+        </tbody>
+      </table>
+    </div>
+
+    <footer style="margin-top: auto; padding-top: 32px; border-top: 1px solid var(--border-color); font-size: 0.82rem; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center; width: 100%;">
+      <div>Passion Fruit Enterprise Admin Portal &copy; 2026 Passion Fruit Inc.</div>
+      <div style="display: flex; gap: 16px;">
+        <span>System Version 2.4.1</span>
+        <span>Secure Enclave Active</span>
+      </div>
+    </footer>
+  </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const themeToggleBtn = document.querySelector('[data-theme-toggle]');
+  const htmlEl = document.documentElement;
+  const savedTheme = localStorage.getItem('pf_theme') || 'dark';
+  htmlEl.setAttribute('data-theme', savedTheme);
+
+  if (themeToggleBtn) {
+    themeToggleBtn.addEventListener('click', () => {
+      const current = htmlEl.getAttribute('data-theme');
+      const next = current === 'dark' ? 'light' : 'dark';
+      htmlEl.setAttribute('data-theme', next);
+      localStorage.setItem('pf_theme', next);
+    });
+  }
+
+  const tickets = JSON.parse(localStorage.getItem('pf_resolved_tickets') || '[]');
+  const pendingTickets = JSON.parse(localStorage.getItem('pf_support_tickets') || '[]');
+  const activeTicket = JSON.parse(localStorage.getItem('pf_active_ticket') || 'null');
+  const sidebarQueueBadge = document.getElementById('sidebarQueueBadge');
+  const sidebarActiveBadge = document.getElementById('sidebarActiveBadge');
+  if (sidebarQueueBadge) sidebarQueueBadge.textContent = pendingTickets.length;
+  if (sidebarActiveBadge) sidebarActiveBadge.textContent = activeTicket ? 1 : 0;
+
+  const tbody = document.getElementById('queueTableBody');
+
+  function renderQueue(items) {
+    if (!tbody) return;
+    if (items.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="5" style="text-align:center; color:var(--text-muted); padding:40px;">
+            No archived tickets available.
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    tbody.innerHTML = items.map((t, index) => `
+      <tr>
+        <td style="font-weight:600; color:var(--accent-blue);">
+          ${t.id || ('TK-' + index)}
+        </td>
+        <td>
+          ${t.user || t.customer || 'Customer'}
+        </td>
+        <td>
+          ${t.query || 'General Support Request'}
+        </td>
+        <td>
+          <span style="
+            padding:6px 12px;
+            border-radius:999px;
+            font-size:0.8rem;
+            font-weight:600;
+            background:${t.status === 'Resolved' ? 'rgba(52,199,89,.15)' : 'rgba(59,130,246,.15)'};
+            color:${t.status === 'Resolved' ? '#34c759' : 'var(--accent-blue)'};
+          ">
+            ${t.status || 'Resolved'}
+          </span>
+        </td>
+        <td>
+          ${t.resolvedAt || t.transferredAt || '-'}
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  renderQueue(tickets);
+
+  const searchInput = document.getElementById('adminSearchInput');
+  if (searchInput) {
+    searchInput.addEventListener('input', e => {
+      const query = e.target.value.toLowerCase();
+      const filtered = tickets.filter(t =>
+        (t.user && t.user.toLowerCase().includes(query)) ||
+        (t.customer && t.customer.toLowerCase().includes(query)) ||
+        (t.id && t.id.toLowerCase().includes(query)) ||
+        (t.status && t.status.toLowerCase().includes(query))
+      );
+      renderQueue(filtered);
+    });
+  }
+
+  const trigger = document.getElementById('adminProfileTrigger');
+  const dropdown = document.getElementById('adminProfileDropdown');
+  if (trigger && dropdown) {
+    trigger.addEventListener('click', e => {
+      e.stopPropagation();
+      dropdown.hidden = !dropdown.hidden;
+    });
+    document.addEventListener('click', e => {
+      if (!dropdown.contains(e.target) && !trigger.contains(e.target)) dropdown.hidden = true;
+    });
+  }
+
+  const popoverLogout = document.getElementById('popoverLogoutBtn');
+  if (popoverLogout) {
+    popoverLogout.addEventListener('click', () => {
+      localStorage.removeItem('pf_session');
+      localStorage.removeItem('pf_active_agent');
+      window.location.href = 'Signin.html';
+    });
+  }
+});
+</script>
+</body>
+</html>
