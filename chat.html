@@ -600,6 +600,7 @@
   
 <script>
 document.addEventListener('DOMContentLoaded', async () => {
+  const PF = window.PF || {};
   const messagesBox = document.getElementById('clientChatMessages');
   const chatInput = document.getElementById('clientChatInput');
   const sendBtn = document.getElementById('clientSendBtn');
@@ -608,17 +609,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   const chips = document.querySelectorAll('.quick-chips .chip');
 
   const session = JSON.parse(localStorage.getItem('pf_session') || 'null');
-  if (!session) return; // core.js handles redirect to Signin.html
+  if (!session) return;
 
   let currentTicket = null;
   let lastMessageSignature = '';
-
-  const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-  }[c]));
+  let lastUserIssue = '';
+  const localHistory = []; // Stores AI conversation before human escalation
 
   function formatTime(iso) {
-    return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return new Date(iso || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
 
   function updateHeaderStatus(ticket) {
@@ -634,7 +633,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (ticket.status === 'waiting') {
       if (chatNameEl) chatNameEl.textContent = 'Support Queue (' + ticket.ticket_code + ')';
       if (chatStatusEl) {
-        chatStatusEl.textContent = '● Waiting for a specialist to accept...';
+        chatStatusEl.textContent = '● Escalated • Waiting for a specialist...';
         chatStatusEl.style.color = '#f59e0b';
       }
     } else if (ticket.status === 'active') {
@@ -646,7 +645,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  function renderBubble(senderRole, senderName, text, timestamp) {
+  function renderBubble(senderRole, senderName, text, timestamp, options = {}) {
     const isCustomer = senderRole === 'customer';
     const wrapper = document.createElement('div');
     wrapper.style.display = 'flex';
@@ -668,7 +667,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     bubble.style.maxWidth = '78%';
     bubble.style.padding = '12px 16px';
     bubble.style.borderRadius = '16px';
-    bubble.style.background = isCustomer ? 'var(--accent, #0071e3)' : 'var(--bg, #161b26)';
+    bubble.style.background = isCustomer ? 'var(--accent, #0071e3)' : 'var(--bg-secondary, var(--bg))';
     bubble.style.color = isCustomer ? '#ffffff' : 'var(--text)';
     bubble.style.border = isCustomer ? 'none' : '1px solid var(--border)';
     bubble.style.fontSize = '0.92rem';
@@ -676,6 +675,48 @@ document.addEventListener('DOMContentLoaded', async () => {
     bubble.style.whiteSpace = 'pre-wrap';
     bubble.style.overflowWrap = 'anywhere';
     bubble.textContent = text;
+
+    // Optional matching guide links from catalog.js
+    if (options.articles && options.articles.length) {
+      const linksWrap = document.createElement('div');
+      linksWrap.style.marginTop = '10px';
+      linksWrap.style.display = 'flex';
+      linksWrap.style.flexDirection = 'column';
+      linksWrap.style.gap = '6px';
+
+      options.articles.forEach(art => {
+        const a = document.createElement('a');
+        a.href = art.href;
+        a.textContent = '📄 ' + art.title + ' ›';
+        a.style.color = 'var(--accent, #0071e3)';
+        a.style.fontWeight = '600';
+        a.style.fontSize = '0.84rem';
+        a.style.textDecoration = 'none';
+        linksWrap.appendChild(a);
+      });
+      bubble.appendChild(linksWrap);
+    }
+
+    // Optional "Talk to a Human Specialist" escalation button
+    if (options.showEscalate && !currentTicket) {
+      const escBtn = document.createElement('button');
+      escBtn.type = 'button';
+      escBtn.textContent = 'Talk to a human specialist';
+      escBtn.style.marginTop = '10px';
+      escBtn.style.display = 'inline-block';
+      escBtn.style.padding = '7px 14px';
+      escBtn.style.borderRadius = '999px';
+      escBtn.style.border = '1px solid var(--accent, #0071e3)';
+      escBtn.style.background = 'transparent';
+      escBtn.style.color = 'var(--accent, #0071e3)';
+      escBtn.style.fontWeight = '600';
+      escBtn.style.fontSize = '0.8rem';
+      escBtn.style.cursor = 'pointer';
+      escBtn.addEventListener('click', () => escalateToAdmin(options.issueText || lastUserIssue || 'Live specialist requested'));
+      bubble.appendChild(document.createElement('br'));
+      bubble.appendChild(escBtn);
+    }
+
     wrapper.appendChild(bubble);
 
     if (timestamp) {
@@ -690,7 +731,118 @@ document.addEventListener('DOMContentLoaded', async () => {
     return wrapper;
   }
 
-  // 1. Check if this logged-in customer already has an open ('waiting' or 'active') ticket
+  /* ---------- STAGE 1: AI Support Assistant (Before Human Admin) ---------- */
+  function generateAIResponse(text) {
+    const q = text.toLowerCase();
+    const wantsHuman = /\b(human|agent|specialist|admin|person|representative|live support|escalate|talk to someone)\b/.test(q);
+    const matchedArticles = typeof PF.matchArticles === 'function' ? PF.matchArticles(text, 2) : [];
+
+    if (wantsHuman) {
+      return { escalateNow: true };
+    }
+
+    if (q.includes('battery') || q.includes('drain') || q.includes('charge')) {
+      return {
+        reply: 'Here is what you can try first for battery or charging issues:\n1. Open Settings > Battery to check which apps consume the most power.\n2. Enable Low Power Mode and update to the latest FruitOS.\n3. Inspect your USB-C / FruitPort cable and adapter for debris.\n\nStill having trouble? I can connect you to a live specialist.',
+        articles: matchedArticles,
+        showEscalate: true
+      };
+    }
+
+    if (q.includes('passcode') || q.includes('password') || q.includes('locked') || q.includes('disabled')) {
+      return {
+        reply: 'If you forgot your passcode:\n1. Connect your device to a computer with a cable.\n2. Put your device into Recovery Mode.\n3. Choose Restore to erase the device and set a new passcode.\n\nNeed step-by-step help from a technician?',
+        articles: matchedArticles,
+        showEscalate: true
+      };
+    }
+
+    if (q.includes('face id') || q.includes('touch id') || q.includes('fingerprint')) {
+      return {
+        reply: 'To troubleshoot Face ID or Touch ID:\n1. Clean the top sensor / camera or Home button with a soft cloth.\n2. Make sure nothing is covering your face or sensor.\n3. Go to Settings > Face ID & Passcode (or Touch ID) and reset your scan.\n\nWould you like a live specialist to take a look?',
+        articles: matchedArticles,
+        showEscalate: true
+      };
+    }
+
+    if (q.includes('wi-fi') || q.includes('wifi') || q.includes('network') || q.includes('internet')) {
+      return {
+        reply: 'To fix Wi-Fi connection issues:\n1. Turn Airplane Mode on for 10 seconds, then off.\n2. Restart your router and Fruit device.\n3. Go to Settings > Wi-Fi, tap your network, and choose Forget This Network, then reconnect.\n\nIf it still won’t connect, you can escalate to a live specialist below.',
+        articles: matchedArticles,
+        showEscalate: true
+      };
+    }
+
+    if (matchedArticles.length) {
+      return {
+        reply: 'I found official troubleshooting guides that match your question. Try the steps inside, or click below if you want a live specialist:',
+        articles: matchedArticles,
+        showEscalate: true
+      };
+    }
+
+    return {
+      reply: 'I can help troubleshoot FruitPhone, FruitMac, FruitPad, FruitWatch, or FruitPods issues—such as battery drain, forgotten passcodes, Face ID/Touch ID, or Wi-Fi problems.\n\nTell me a bit more about what’s happening, or click below to connect directly with a human specialist.',
+      articles: [],
+      showEscalate: true
+    };
+  }
+
+  /* ---------- STAGE 2: Escalate to Supabase Queue & Live Admin ---------- */
+  async function escalateToAdmin(issueSummary) {
+    if (currentTicket) return;
+
+    const summary = (issueSummary || lastUserIssue || 'Customer requested live specialist').slice(0, 140);
+    const randomCode = 'KB-TICK-' + Math.floor(1000 + Math.random() * 9000);
+
+    const { data: newTicket, error: ticketErr } = await window.db
+      .from('support_tickets')
+      .insert([{
+        ticket_code: randomCode,
+        user_id: session.id || null,
+        customer_name: session.name || session.firstName || 'Customer',
+        customer_email: session.email,
+        issue_summary: summary,
+        status: 'waiting'
+      }])
+      .select()
+      .single();
+
+    if (ticketErr) {
+      alert('Could not connect to live queue: ' + ticketErr.message);
+      return;
+    }
+
+    currentTicket = newTicket;
+    updateHeaderStatus(currentTicket);
+
+    // Transfer the AI chat context into Supabase chat_messages so the admin sees what the customer already tried
+    const rowsToInsert = localHistory.length
+      ? localHistory.map(item => ({
+          ticket_id: currentTicket.id,
+          sender_role: item.role,
+          sender_name: item.name,
+          message_text: item.text
+        }))
+      : [{
+          ticket_id: currentTicket.id,
+          sender_role: 'customer',
+          sender_name: session.name || session.firstName || 'Customer',
+          message_text: summary
+        }];
+
+    rowsToInsert.push({
+      ticket_id: currentTicket.id,
+      sender_role: 'admin',
+      sender_name: 'Support Assistant',
+      message_text: `Ticket ${currentTicket.ticket_code} created. A live Passion Fruit specialist has been notified and will join shortly.`
+    });
+
+    await window.db.from('chat_messages').insert(rowsToInsert);
+    await syncMessages();
+  }
+
+  /* ---------- Check Existing Open Ticket on Load ---------- */
   async function loadOpenTicket() {
     const { data, error } = await window.db
       .from('support_tickets')
@@ -708,11 +860,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // 2. Poll Supabase for new messages & ticket status changes
+  /* ---------- Poll Supabase Once Escalated ---------- */
   async function syncMessages() {
     if (!currentTicket) return;
 
-    // Check if ticket status changed (e.g., waiting -> active, or resolved)
     const { data: freshTicket } = await window.db
       .from('support_tickets')
       .select('*')
@@ -724,15 +875,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         const closedCode = freshTicket.ticket_code;
         currentTicket = null;
         lastMessageSignature = '';
+        localHistory.length = 0;
         updateHeaderStatus(null);
 
-        const notice = renderBubble(
-          'admin',
-          'System',
-          `Ticket ${closedCode} has been marked as resolved by our specialist. Send a new message anytime if you need more help!`,
-          new Date().toISOString()
+        messagesBox.appendChild(
+          renderBubble(
+            'admin',
+            'Support Assistant',
+            `Ticket ${closedCode} has been marked as resolved. I'm back if you have any new questions!`,
+            new Date().toISOString()
+          )
         );
-        messagesBox.appendChild(notice);
         messagesBox.scrollTop = messagesBox.scrollHeight;
         return;
       }
@@ -764,7 +917,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     messagesBox.scrollTop = messagesBox.scrollHeight;
   }
 
-  // 3. Send message (creates a support ticket first if none is active)
+  /* ---------- Handle User Message ---------- */
   async function handleSend(customText) {
     const text = (typeof customText === 'string' ? customText : chatInput.value).trim();
     if (!text) return;
@@ -773,29 +926,34 @@ document.addEventListener('DOMContentLoaded', async () => {
     sendBtn.disabled = true;
 
     try {
+      // If NOT escalated yet -> AI Assistant handles it locally first
       if (!currentTicket) {
-        const randomCode = 'KB-TICK-' + Math.floor(1000 + Math.random() * 9000);
-        const { data: newTicket, error: ticketErr } = await window.db
-          .from('support_tickets')
-          .insert([{
-            ticket_code: randomCode,
-            user_id: session.id || null,
-            customer_name: session.name || session.firstName || 'Customer',
-            customer_email: session.email,
-            issue_summary: text.slice(0, 140),
-            status: 'waiting'
-          }])
-          .select()
-          .single();
+        lastUserIssue = text;
+        const now = new Date().toISOString();
+        const customerName = session.name || session.firstName || 'Customer';
 
-        if (ticketErr) {
-          alert('Could not start support ticket: ' + ticketErr.message);
-          return;
+        localHistory.push({ role: 'customer', name: customerName, text });
+        messagesBox.appendChild(renderBubble('customer', customerName, text, now));
+        messagesBox.scrollTop = messagesBox.scrollHeight;
+
+        const ai = generateAIResponse(text);
+        if (ai.escalateNow) {
+          await escalateToAdmin(text);
+        } else {
+          localHistory.push({ role: 'admin', name: 'Support Assistant', text: ai.reply });
+          messagesBox.appendChild(
+            renderBubble('admin', 'Support Assistant', ai.reply, new Date().toISOString(), {
+              articles: ai.articles,
+              showEscalate: ai.showEscalate,
+              issueText: text
+            })
+          );
+          messagesBox.scrollTop = messagesBox.scrollHeight;
         }
-        currentTicket = newTicket;
-        updateHeaderStatus(currentTicket);
+        return;
       }
 
+      // If ALREADY escalated -> send directly to Supabase live chat with Admin
       const { error: msgErr } = await window.db
         .from('chat_messages')
         .insert([{
@@ -835,6 +993,5 @@ document.addEventListener('DOMContentLoaded', async () => {
   setInterval(syncMessages, 1500);
 });
 </script>
-
 </body>
 </html>
