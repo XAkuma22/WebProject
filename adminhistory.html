@@ -20,6 +20,7 @@
       --accent-blue: #3b82f6;
       --accent-blue-glow: rgba(59, 130, 246, 0.25);
       --sidebar-width: 250px;
+      --ease-apple: cubic-bezier(0.22, 1, 0.36, 1);
     }
 
     [data-theme="light"] {
@@ -32,23 +33,35 @@
       --accent-blue: #0071e3;
       --accent-blue-glow: rgba(0, 113, 227, 0.2);
     }
-    
+
     html, body {
       margin: 0;
       padding: 0;
+      width: 100%;
       background: radial-gradient(ellipse 120% 85% at 30% 0%, rgba(59, 130, 246, 0.14) 0%, transparent 80%), var(--bg-main) !important;
       background-attachment: fixed;
       font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif);
       color: var(--text-main);
       min-height: 100vh;
-      scrollbar-gutter: stable;
+      overflow-x: hidden;
       -webkit-font-smoothing: antialiased;
-      transition: background-color 0.3s ease, color 0.3s ease;
+      transition: background-color 0.35s var(--ease-apple), color 0.35s var(--ease-apple);
     }
 
     [data-theme="light"] html, [data-theme="light"] body {
       background: radial-gradient(ellipse 120% 85% at 30% 0%, rgba(0, 113, 227, 0.09) 0%, transparent 85%), var(--bg-main) !important;
       background-attachment: fixed;
+    }
+
+    .admin-wrapper {
+      margin-left: 282px;
+      width: calc(100% - 282px);
+      min-height: 100vh;
+      background: transparent !important;
+      padding: 20px 36px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
     }
 
     .admin-sidebar {
@@ -66,6 +79,7 @@
       padding: 20px 16px;
       box-sizing: border-box;
       box-shadow: 0 20px 45px rgba(0, 0, 0, 0.16), 0 0 0 1px var(--border-color);
+      transition: background-color 0.35s var(--ease-apple), border-color 0.35s var(--ease-apple);
     }
 
     .admin-sidebar__brand-row {
@@ -117,7 +131,7 @@
       color: var(--text-muted);
       font-weight: 500;
       font-size: 0.9rem;
-      transition: all 0.2s ease;
+      transition: all 0.25s var(--ease-apple);
       margin-bottom: 2px;
       background: transparent;
       border: none;
@@ -130,6 +144,7 @@
     .admin-nav-item:hover {
       background: var(--bg-card-hover);
       color: var(--text-main);
+      transform: translateX(2px);
     }
 
     .admin-nav-item.active {
@@ -148,17 +163,6 @@
       margin-left: auto;
     }
 
-    .admin-wrapper {
-      margin-left: 282px;
-      width: calc(100% - 282px);
-      min-height: 100vh;
-      background: transparent !important;
-      padding: 20px 36px;
-      box-sizing: border-box;
-      display: flex;
-      flex-direction: column;
-    }
-
     .admin-topbar {
       height: 64px;
       display: flex;
@@ -169,6 +173,7 @@
     }
 
     .search-task-bar {
+      position: relative;
       display: flex;
       align-items: center;
       background: var(--bg-card);
@@ -181,11 +186,12 @@
       color: var(--text-muted);
       font-size: 0.9rem;
       box-sizing: border-box;
-      transition: border-color 0.2s;
+      transition: border-color 0.25s var(--ease-apple), box-shadow 0.25s var(--ease-apple);
     }
 
     .search-task-bar:focus-within {
       border-color: var(--accent-blue);
+      box-shadow: 0 0 0 3px var(--accent-blue-glow);
     }
 
     .search-task-bar input {
@@ -226,7 +232,7 @@
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: all 0.25s var(--ease-apple);
     }
 
     .icon-btn:hover {
@@ -244,7 +250,7 @@
       padding: 5px 14px 5px 5px;
       border-radius: 30px;
       cursor: pointer;
-      transition: border-color 0.2s;
+      transition: border-color 0.25s var(--ease-apple);
     }
 
     .user-profile-pill:hover {
@@ -320,10 +326,101 @@
       font-size: 0.75rem;
       text-transform: uppercase;
       letter-spacing: 0.08em;
-      border-radius: 8px;
     }
+    .queue-table th:first-child { border-top-left-radius: 10px; border-bottom-left-radius: 10px; }
+    .queue-table th:last-child { border-top-right-radius: 10px; border-bottom-right-radius: 10px; }
     .queue-table tr:last-child td {
       border-bottom: none;
+    }
+
+    .archive-row {
+      cursor: pointer;
+      transition: background-color 0.2s var(--ease-apple);
+    }
+    .archive-row:hover {
+      background: var(--bg-card-hover);
+    }
+
+    /* Skeleton Shimmer Loader */
+    .skeleton {
+      background: linear-gradient(90deg, var(--bg-main) 25%, var(--border-color) 50%, var(--bg-main) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.3s infinite linear;
+      border-radius: 8px;
+      color: transparent !important;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* Slide-Over Transcript & Customer Details Drawer */
+    .transcript-drawer-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.55);
+      backdrop-filter: blur(4px);
+      z-index: 9999;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .transcript-drawer-backdrop[hidden] {
+      display: none !important;
+    }
+
+    .transcript-drawer {
+      width: 100%;
+      max-width: 480px;
+      height: 100vh;
+      background: var(--bg-card);
+      border-left: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      padding: 24px;
+      box-sizing: border-box;
+      box-shadow: -20px 0 50px rgba(0, 0, 0, 0.35);
+      animation: drawerSlideIn 0.3s var(--ease-apple);
+    }
+
+    @keyframes drawerSlideIn {
+      from { transform: translateX(100%); }
+      to { transform: translateX(0); }
+    }
+
+    .customer-detail-card {
+      background: var(--bg-main);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 14px 16px;
+      margin-bottom: 16px;
+      flex-shrink: 0;
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px 14px;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border-color);
+      font-size: 0.8rem;
+    }
+
+    .detail-label {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      font-weight: 700;
+      margin-bottom: 2px;
+    }
+
+    .detail-val {
+      color: var(--text-main);
+      font-weight: 500;
+      word-break: break-word;
     }
 
     @media(max-width: 900px) {
@@ -369,8 +466,8 @@
     <header class="admin-topbar">
       <div class="search-task-bar">
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-        <input type="text" id="adminSearchInput" placeholder="Search task or tickets...">
-        <span class="shortcut-badge">⌘K</span>
+        <input type="text" id="adminSearchInput" placeholder="Search ticket ID (e.g. 4387), customer, or issue...">
+        <span class="shortcut-badge">Ctrl K</span>
       </div>
 
       <div class="topbar-actions">
@@ -392,9 +489,9 @@
               <div style="font-weight: 700; font-size: 0.9rem;">System Admin</div>
               <div style="font-size: 0.78rem; color: var(--text-muted);">admin@passionfruit.com</div>
             </div>
-            <a href="adminpage.html" style="display: block; padding: 8px 10px; color: var(--text-main); text-decoration: none; font-size: 0.85rem; border-radius: 8px;" onmouseover="this.style.background='var(--bg-card-hover)'" onmouseout="this.style.background='transparent'">Dashboard home</a>
+            <a href="adminpage.html" style="display: block; padding: 8px 10px; color: var(--text-main); text-decoration: none; font-size: 0.85rem; border-radius: 8px;">Dashboard home</a>
             <div style="border-top: 1px solid var(--border-color); margin-top: 6px; padding-top: 6px;">
-              <button type="button" id="popoverLogoutBtn" style="width: 100%; text-align: left; background: transparent; border: none; padding: 8px 10px; color: #ef4444; font-size: 0.85rem; font-weight: 600; border-radius: 8px; cursor: pointer;" onmouseover="this.style.background='var(--bg-card-hover)'" onmouseout="this.style.background='transparent'">Log out</button>
+              <button type="button" id="popoverLogoutBtn" style="width: 100%; text-align: left; background: transparent; border: none; padding: 8px 10px; color: #ef4444; font-size: 0.85rem; font-weight: 600; border-radius: 8px; cursor: pointer;">Log out</button>
             </div>
           </div>
         </div>
@@ -403,7 +500,7 @@
 
     <div class="dashboard-title-area">
       <h1>Ticket Archives</h1>
-      <p>Review and manage resolved and transferred customer histories.</p>
+      <p>Click any resolved ticket below to inspect customer details and the full conversation transcript.</p>
     </div>
 
     <div class="dash-box">
@@ -418,21 +515,80 @@
           </tr>
         </thead>
         <tbody id="queueTableBody">
-          <!-- Dynamically populated -->
+          <tr>
+            <td colspan="5"><div class="skeleton" style="height: 36px; width: 100%;"></div></td>
+          </tr>
         </tbody>
       </table>
     </div>
 
-    <footer style="margin-top: auto; padding-top: 32px; border-top: 1px solid var(--border-color); font-size: 0.82rem; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center; width: 100%;">
-      <div>Passion Fruit Enterprise Admin Portal &copy; 2026 Passion Fruit Inc.</div>
-      <div style="display: flex; gap: 16px;">
+    <footer style="margin-top: auto; padding-top: 18px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; color: var(--text-muted); flex-shrink: 0;">
+      <span>Passion Fruit Enterprise Admin Portal © 2026 Passion Fruit Inc.</span>
+      <div style="display: flex; align-items: center; gap: 16px;">
         <span>System Version 2.4.1</span>
-        <span>Secure Enclave Active</span>
+        <span style="display: inline-flex; align-items: center; gap: 6px;">
+          <span style="width: 7px; height: 7px; border-radius: 50%; background: #34c759; box-shadow: 0 0 0 3px rgba(52, 199, 89, 0.2);"></span>
+          Secure Enclave Active
+        </span>
       </div>
     </footer>
   </div>
+
+  <!-- Slide-Over Customer Details & Chat Transcript Drawer -->
+  <div class="transcript-drawer-backdrop" id="transcriptBackdrop" hidden>
+    <div class="transcript-drawer">
+      <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 14px; border-bottom: 1px solid var(--border-color); margin-bottom: 14px; flex-shrink: 0;">
+        <div>
+          <div style="font-weight: 700; font-size: 1.05rem; color: var(--accent-blue);" id="drawerTicketCode">Ticket Transcript</div>
+          <div style="font-size: 0.78rem; color: var(--text-muted);" id="drawerSubtitle">Archived support record</div>
+        </div>
+        <button type="button" id="closeTranscriptBtn" class="icon-btn" aria-label="Close transcript">✕</button>
+      </div>
+
+      <!-- Customer & Ticket Metadata Card -->
+      <div class="customer-detail-card">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div class="user-avatar" id="drawerCustAvatar" style="width: 36px; height: 36px; font-size: 0.9rem;">C</div>
+            <div>
+              <div style="font-weight: 700; font-size: 0.92rem;" id="drawerCustName">Customer</div>
+              <div style="font-size: 0.78rem; color: var(--text-muted);" id="drawerCustEmail">No email provided</div>
+            </div>
+          </div>
+          <span style="padding: 4px 10px; border-radius: 999px; font-size: 0.72rem; font-weight: 700; background: rgba(52,199,89,0.15); color: #34c759;">Resolved</span>
+        </div>
+
+        <div class="detail-grid">
+          <div>
+            <div class="detail-label">Reported Issue</div>
+            <div class="detail-val" id="drawerIssue">-</div>
+          </div>
+          <div>
+            <div class="detail-label">Handled By</div>
+            <div class="detail-val" id="drawerAdmin">-</div>
+          </div>
+          <div>
+            <div class="detail-label">Opened At</div>
+            <div class="detail-val" id="drawerCreated">-</div>
+          </div>
+          <div>
+            <div class="detail-label">Resolved At</div>
+            <div class="detail-val" id="drawerResolved">-</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 10px; flex-shrink: 0;">
+        Conversation Transcript
+      </div>
+
+      <div id="drawerMessagesBody" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 4px;"></div>
+    </div>
+  </div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/db.js"></script>
+<script src="js/admin-search.js"></script>
 
 <script>
 document.addEventListener('DOMContentLoaded', async () => {
@@ -451,7 +607,61 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   const tbody = document.getElementById('queueTableBody');
+  const backdrop = document.getElementById('transcriptBackdrop');
+  const closeDrawerBtn = document.getElementById('closeTranscriptBtn');
+  const drawerMessagesBody = document.getElementById('drawerMessagesBody');
+
   const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const fmtDate = (iso) => iso ? new Date(iso).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : '-';
+
+  async function openTicketDrawer(ticket) {
+    const custName = ticket.customer_name || 'Guest Customer';
+    document.getElementById('drawerTicketCode').textContent = ticket.ticket_code || 'Ticket Details';
+    document.getElementById('drawerSubtitle').textContent = `Session ID #${ticket.id}`;
+    document.getElementById('drawerCustAvatar').textContent = custName.charAt(0).toUpperCase();
+    document.getElementById('drawerCustName').textContent = custName;
+    document.getElementById('drawerCustEmail').textContent = ticket.customer_email || 'Guest / Unregistered';
+    document.getElementById('drawerIssue').textContent = ticket.issue_summary || 'General Support';
+    document.getElementById('drawerAdmin').textContent = ticket.assigned_admin || 'System Admin';
+    document.getElementById('drawerCreated').textContent = fmtDate(ticket.created_at);
+    document.getElementById('drawerResolved').textContent = fmtDate(ticket.resolved_at);
+
+    drawerMessagesBody.innerHTML = `
+      <div class="skeleton" style="height: 44px; width: 72%;"></div>
+      <div class="skeleton" style="height: 44px; width: 78%; align-self: flex-end;"></div>
+      <div class="skeleton" style="height: 44px; width: 65%;"></div>
+    `;
+    backdrop.hidden = false;
+
+    const { data: msgs, error } = await window.db
+      .from('chat_messages')
+      .select('*')
+      .eq('ticket_id', ticket.id)
+      .order('sent_at', { ascending: true });
+
+    if (error || !msgs || !msgs.length) {
+      drawerMessagesBody.innerHTML = `<p style="color: var(--text-muted); text-align: center; margin: auto; font-size: 0.85rem;">No chat messages recorded for this session.</p>`;
+      return;
+    }
+
+    drawerMessagesBody.innerHTML = msgs.map(m => {
+      const isAdmin = m.sender_role === 'admin';
+      const timeStr = m.sent_at ? new Date(m.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+      return `
+        <div style="display: flex; flex-direction: column; align-items: ${isAdmin ? 'flex-end' : 'flex-start'};">
+          <span style="font-size: 0.68rem; font-weight: 600; color: var(--text-muted); margin: 0 4px 3px;">${esc(m.sender_name || (isAdmin ? 'Support' : custName))}</span>
+          <div style="max-width: 82%; padding: 10px 14px; border-radius: 14px; font-size: 0.86rem; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; background: ${isAdmin ? 'var(--accent-blue)' : 'var(--bg-main)'}; color: ${isAdmin ? '#fff' : 'var(--text-main)'}; border: ${isAdmin ? 'none' : '1px solid var(--border-color)'};">${esc(m.message_text)}</div>
+          <span style="font-size: 0.66rem; color: var(--text-muted); margin: 3px 4px 0;">${timeStr}</span>
+        </div>
+      `;
+    }).join('');
+  }
+
+  closeDrawerBtn.addEventListener('click', () => { backdrop.hidden = true; });
+  backdrop.addEventListener('click', (e) => { if (e.target === backdrop) backdrop.hidden = true; });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !backdrop.hidden) backdrop.hidden = true;
+  });
 
   const { data: allTickets, error } = await window.db
     .from('support_tickets')
@@ -483,34 +693,41 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    tbody.innerHTML = items.map(t => `
-      <tr>
+    tbody.innerHTML = items.map((t, idx) => `
+      <tr class="archive-row" data-ticket-id="${t.id}" title="Click to view customer details & chat log">
         <td style="font-weight:600; color:var(--accent-blue);">${esc(t.ticket_code)}</td>
-        <td>${esc(t.customer_name)}</td>
+        <td>
+          <div style="font-weight: 600;">${esc(t.customer_name)}</div>
+          ${t.customer_email ? `<div style="font-size: 0.76rem; color: var(--text-muted);">${esc(t.customer_email)}</div>` : ''}
+        </td>
         <td>${esc(t.issue_summary)}</td>
         <td>
-          <span style="padding:6px 12px; border-radius:999px; font-size:0.8rem; font-weight:600; background:rgba(52,199,89,.15); color:#34c759;">
+          <span style="padding:5px 11px; border-radius:999px; font-size:0.78rem; font-weight:600; background:rgba(52,199,89,.15); color:#34c759;">
             Resolved
           </span>
         </td>
-        <td>${t.resolved_at ? new Date(t.resolved_at).toLocaleString() : '-'}</td>
+        <td style="color: var(--text-muted);">${t.resolved_at ? new Date(t.resolved_at).toLocaleString() : '-'}</td>
       </tr>
     `).join('');
+
+    tbody.querySelectorAll('.archive-row').forEach(row => {
+      row.addEventListener('click', () => {
+        const id = row.getAttribute('data-ticket-id');
+        const found = tickets.find(item => String(item.id) === String(id));
+        if (found) openTicketDrawer(found);
+      });
+    });
   }
 
   renderQueue(tickets);
 
-  const searchInput = document.getElementById('adminSearchInput');
-  if (searchInput) {
-    searchInput.addEventListener('input', e => {
-      const query = e.target.value.toLowerCase();
-      const filtered = tickets.filter(t =>
-        t.customer_name.toLowerCase().includes(query) ||
-        t.issue_summary.toLowerCase().includes(query) ||
-        t.ticket_code.toLowerCase().includes(query)
-      );
-      renderQueue(filtered);
-    });
+  // Auto-open drawer if navigated here with ?q=KB-TICK-4387
+  const urlQuery = new URLSearchParams(window.location.search).get('q');
+  if (urlQuery) {
+    const exactMatch = tickets.find(t =>
+      (t.ticket_code || '').toLowerCase().includes(urlQuery.toLowerCase())
+    );
+    if (exactMatch) openTicketDrawer(exactMatch);
   }
 
   const trigger = document.getElementById('adminProfileTrigger');
@@ -533,6 +750,200 @@ document.addEventListener('DOMContentLoaded', async () => {
       window.location.href = 'Signin.html';
     });
   }
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const searchBar = document.querySelector('.search-task-bar');
+  const searchInput = searchBar ? searchBar.querySelector('input') : null;
+  if (!searchBar || !searchInput) return;
+
+  // 1. Detect OS for shortcut badge (⌘K on Mac, Ctrl K on Windows/Linux)
+  const badge = searchBar.querySelector('.shortcut-badge');
+  if (badge) {
+    badge.textContent = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘K' : 'Ctrl K';
+  }
+
+  // 2. Keyboard shortcuts: Ctrl+K / Cmd+K to focus, Escape to clear & close
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      searchInput.focus();
+      searchInput.select();
+    }
+    if (e.key === 'Escape' && document.activeElement === searchInput) {
+      searchInput.value = '';
+      filterCurrentPageRows('');
+      dropdown.style.display = 'none';
+      searchInput.blur();
+    }
+  });
+
+  // 3. Create floating dropdown container for live Supabase search results
+  searchBar.style.position = 'relative';
+  const dropdown = document.createElement('div');
+  dropdown.id = 'adminSearchDropdown';
+  dropdown.style.cssText = `
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.25);
+    padding: 8px;
+    z-index: 999;
+    display: none;
+    max-height: 360px;
+    overflow-y: auto;
+  `;
+  searchBar.appendChild(dropdown);
+
+  // 4. Real-time table row filtering on the current page
+  function filterCurrentPageRows(query, highlightExact = false) {
+    const q = (query || '').trim().toLowerCase();
+    const rows = document.querySelectorAll('tbody tr, .queue-item, .history-item');
+    rows.forEach((row) => {
+      const text = row.textContent.toLowerCase();
+      const match = !q || text.includes(q);
+      row.style.display = match ? '' : 'none';
+
+      if (q && match && highlightExact) {
+        row.style.background = 'rgba(0, 113, 227, 0.14)';
+        row.style.transition = 'background 0.4s ease';
+        setTimeout(() => { row.style.background = ''; }, 2500);
+      }
+    });
+  }
+
+  // Keep filter active if background polling re-renders table rows
+  const observer = new MutationObserver(() => {
+    if (searchInput.value.trim()) {
+      filterCurrentPageRows(searchInput.value);
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+
+  // Handle URL query deep-linking (?q=4387)
+  const urlQuery = new URLSearchParams(window.location.search).get('q');
+  if (urlQuery) {
+    searchInput.value = urlQuery;
+    setTimeout(() => filterCurrentPageRows(urlQuery, true), 450);
+  }
+
+  // 5. Query Supabase support_tickets table (matches partial codes like "4387", names, or issues)
+  async function searchTickets(raw) {
+    if (!window.db) return [];
+    const clean = raw.replace(/[^a-zA-Z0-9@._-\s]/g, '').trim();
+    if (!clean) return [];
+
+    const { data, error } = await window.db
+      .from('support_tickets')
+      .select('id, ticket_code, customer_name, customer_email, issue_summary, status')
+      .or(`ticket_code.ilike.%${clean}%,customer_name.ilike.%${clean}%,customer_email.ilike.%${clean}%,issue_summary.ilike.%${clean}%`)
+      .order('created_at', { ascending: false })
+      .limit(8);
+
+    return error || !data ? [] : data;
+  }
+
+  let latestResults = [];
+  let searchTimer = null;
+
+  searchInput.addEventListener('input', () => {
+    const raw = searchInput.value.trim();
+    filterCurrentPageRows(raw);
+
+    if (!raw) {
+      latestResults = [];
+      dropdown.style.display = 'none';
+      dropdown.innerHTML = '';
+      return;
+    }
+
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(async () => {
+      const tickets = await searchTickets(raw);
+      latestResults = tickets;
+      dropdown.innerHTML = '';
+
+      if (!tickets.length) {
+        dropdown.innerHTML = `<div style="padding: 12px 14px; font-size: 0.85rem; color: var(--text-muted);">No ticket found matching "<strong>${raw}</strong>"</div>`;
+        dropdown.style.display = 'block';
+        return;
+      }
+
+      const header = document.createElement('div');
+      header.textContent = `MATCHING TICKETS (${tickets.length})`;
+      header.style.cssText = 'font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; color: var(--text-muted); padding: 6px 10px 4px;';
+      dropdown.appendChild(header);
+
+      tickets.forEach((t) => {
+        const targetPage =
+          t.status === 'resolved' ? 'adminhistory.html' :
+          t.status === 'active' ? 'adminchat.html' : 'adminqueue.html';
+
+        const badgeBg =
+          t.status === 'resolved' ? 'rgba(52, 199, 89, 0.15)' :
+          t.status === 'active' ? 'rgba(0, 113, 227, 0.15)' : 'rgba(245, 158, 11, 0.15)';
+
+        const badgeColor =
+          t.status === 'resolved' ? '#34c759' :
+          t.status === 'active' ? 'var(--accent-blue)' : '#f59e0b';
+
+        const item = document.createElement('a');
+        item.href = `${targetPage}?q=${encodeURIComponent(t.ticket_code)}`;
+        item.style.cssText = 'display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; text-decoration: none; color: var(--text-main); font-size: 0.86rem; transition: background 0.15s;';
+        item.innerHTML = `
+          <div style="min-width: 0;">
+            <div style="font-weight: 700; color: var(--accent-blue);">${t.ticket_code} <span style="font-weight: 600; color: var(--text-main);">• ${t.customer_name || 'Customer'}</span></div>
+            <div style="font-size: 0.78rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Issue: ${t.issue_summary || 'General Support'}</div>
+          </div>
+          <span style="flex-shrink: 0; padding: 3px 9px; border-radius: 999px; background: ${badgeBg}; color: ${badgeColor}; font-size: 0.72rem; font-weight: 700; text-transform: capitalize;">
+            ${t.status}
+          </span>
+        `;
+
+        item.addEventListener('mouseenter', () => { item.style.background = 'var(--bg-card-hover)'; });
+        item.addEventListener('mouseleave', () => { item.style.background = 'transparent'; });
+        
+        // If already on the target page, filter & highlight immediately without page reload
+        item.addEventListener('click', (e) => {
+          if (window.location.pathname.toLowerCase().endsWith(targetPage.toLowerCase())) {
+            e.preventDefault();
+            searchInput.value = t.ticket_code;
+            dropdown.style.display = 'none';
+            filterCurrentPageRows(t.ticket_code, true);
+          }
+        });
+
+        dropdown.appendChild(item);
+      });
+
+      dropdown.style.display = 'block';
+    }, 150);
+  });
+
+  // Pressing Enter instantly navigates to the top matching ticket
+  searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && latestResults.length > 0) {
+      e.preventDefault();
+      const top = latestResults[0];
+      const targetPage =
+        top.status === 'resolved' ? 'adminhistory.html' :
+        top.status === 'active' ? 'adminchat.html' : 'adminqueue.html';
+      window.location.href = `${targetPage}?q=${encodeURIComponent(top.ticket_code)}`;
+    }
+  });
+
+  // Close dropdown when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!searchBar.contains(e.target)) {
+      dropdown.style.display = 'none';
+    }
+  });
 });
 </script>
 </body>

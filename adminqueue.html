@@ -33,18 +33,30 @@
       --accent-blue-glow: rgba(0, 113, 227, 0.2);
     }
     
-    html, body {
-      margin: 0;
-      padding: 0;
-      background: radial-gradient(ellipse 120% 85% at 30% 0%, rgba(59, 130, 246, 0.14) 0%, transparent 80%), var(--bg-main) !important;
-      background-attachment: fixed;
-      font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif);
-      color: var(--text-main);
-      min-height: 100vh;
-      scrollbar-gutter: stable;
-      -webkit-font-smoothing: antialiased;
-      transition: background-color 0.3s ease, color 0.3s ease;
-    }
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  background: radial-gradient(ellipse 120% 85% at 30% 0%, rgba(59, 130, 246, 0.14) 0%, transparent 80%), var(--bg-main) !important;
+  background-attachment: fixed;
+  font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif);
+  color: var(--text-main);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.admin-wrapper {
+  margin-left: 282px;
+  width: calc(100% - 282px);
+  min-height: 100vh;
+  background: transparent !important;
+  padding: 20px 36px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
 
     [data-theme="light"] html, [data-theme="light"] body {
       background: radial-gradient(ellipse 120% 85% at 30% 0%, rgba(0, 113, 227, 0.09) 0%, transparent 85%), var(--bg-main) !important;
@@ -148,16 +160,6 @@
       margin-left: auto;
     }
 
-    .admin-wrapper {
-      margin-left: 282px;
-      width: calc(100% - 282px);
-      min-height: 100vh;
-      background: transparent !important;
-      padding: 20px 36px;
-      box-sizing: border-box;
-      display: flex;
-      flex-direction: column;
-    }
 
     .admin-topbar {
       height: 64px;
@@ -422,13 +424,16 @@
       </table>
     </div>
 
-    <footer style="margin-top: auto; padding-top: 32px; border-top: 1px solid var(--border-color); font-size: 0.82rem; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center; width: 100%;">
-      <div>Passion Fruit Enterprise Admin Portal &copy; 2026 Passion Fruit Inc.</div>
-      <div style="display: flex; gap: 16px;">
-        <span>System Version 2.4.1</span>
-        <span>Secure Enclave Active</span>
-      </div>
-    </footer>
+<footer style="margin-top: auto; padding-top: 18px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; color: var(--text-muted); flex-shrink: 0;">
+  <span>Passion Fruit Enterprise Admin Portal © 2026 Passion Fruit Inc.</span>
+  <div style="display: flex; align-items: center; gap: 16px;">
+    <span>System Version 2.4.1</span>
+    <span style="display: inline-flex; align-items: center; gap: 6px;">
+      <span style="width: 7px; height: 7px; border-radius: 50%; background: #34c759; box-shadow: 0 0 0 3px rgba(52, 199, 89, 0.2);"></span>
+      Secure Enclave Active
+    </span>
+  </div>
+</footer>
   </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/db.js"></script>
@@ -552,5 +557,198 @@
       }
     });
   </script>
+  <script>
+document.addEventListener('DOMContentLoaded', () => {
+  const searchBar = document.querySelector('.search-task-bar');
+  const searchInput = searchBar ? searchBar.querySelector('input') : null;
+  if (!searchBar || !searchInput) return;
+
+  // 1. Detect OS for shortcut badge (⌘K on Mac, Ctrl K on Windows/Linux)
+  const badge = searchBar.querySelector('.shortcut-badge');
+  if (badge) {
+    badge.textContent = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘K' : 'Ctrl K';
+  }
+
+  // 2. Keyboard shortcuts: Ctrl+K / Cmd+K to focus, Escape to clear & close
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      searchInput.focus();
+      searchInput.select();
+    }
+    if (e.key === 'Escape' && document.activeElement === searchInput) {
+      searchInput.value = '';
+      filterCurrentPageRows('');
+      dropdown.style.display = 'none';
+      searchInput.blur();
+    }
+  });
+
+  // 3. Create floating dropdown container for live Supabase search results
+  searchBar.style.position = 'relative';
+  const dropdown = document.createElement('div');
+  dropdown.id = 'adminSearchDropdown';
+  dropdown.style.cssText = `
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.25);
+    padding: 8px;
+    z-index: 999;
+    display: none;
+    max-height: 360px;
+    overflow-y: auto;
+  `;
+  searchBar.appendChild(dropdown);
+
+  // 4. Real-time table row filtering on the current page
+  function filterCurrentPageRows(query, highlightExact = false) {
+    const q = (query || '').trim().toLowerCase();
+    const rows = document.querySelectorAll('tbody tr, .queue-item, .history-item');
+    rows.forEach((row) => {
+      const text = row.textContent.toLowerCase();
+      const match = !q || text.includes(q);
+      row.style.display = match ? '' : 'none';
+
+      if (q && match && highlightExact) {
+        row.style.background = 'rgba(0, 113, 227, 0.14)';
+        row.style.transition = 'background 0.4s ease';
+        setTimeout(() => { row.style.background = ''; }, 2500);
+      }
+    });
+  }
+
+  // Keep filter active if background polling re-renders table rows
+  const observer = new MutationObserver(() => {
+    if (searchInput.value.trim()) {
+      filterCurrentPageRows(searchInput.value);
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+
+  // Handle URL query deep-linking (?q=4387)
+  const urlQuery = new URLSearchParams(window.location.search).get('q');
+  if (urlQuery) {
+    searchInput.value = urlQuery;
+    setTimeout(() => filterCurrentPageRows(urlQuery, true), 450);
+  }
+
+  // 5. Query Supabase support_tickets table (matches partial codes like "4387", names, or issues)
+  async function searchTickets(raw) {
+    if (!window.db) return [];
+    const clean = raw.replace(/[^a-zA-Z0-9@._-\s]/g, '').trim();
+    if (!clean) return [];
+
+    const { data, error } = await window.db
+      .from('support_tickets')
+      .select('id, ticket_code, customer_name, customer_email, issue_summary, status')
+      .or(`ticket_code.ilike.%${clean}%,customer_name.ilike.%${clean}%,customer_email.ilike.%${clean}%,issue_summary.ilike.%${clean}%`)
+      .order('created_at', { ascending: false })
+      .limit(8);
+
+    return error || !data ? [] : data;
+  }
+
+  let latestResults = [];
+  let searchTimer = null;
+
+  searchInput.addEventListener('input', () => {
+    const raw = searchInput.value.trim();
+    filterCurrentPageRows(raw);
+
+    if (!raw) {
+      latestResults = [];
+      dropdown.style.display = 'none';
+      dropdown.innerHTML = '';
+      return;
+    }
+
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(async () => {
+      const tickets = await searchTickets(raw);
+      latestResults = tickets;
+      dropdown.innerHTML = '';
+
+      if (!tickets.length) {
+        dropdown.innerHTML = `<div style="padding: 12px 14px; font-size: 0.85rem; color: var(--text-muted);">No ticket found matching "<strong>${raw}</strong>"</div>`;
+        dropdown.style.display = 'block';
+        return;
+      }
+
+      const header = document.createElement('div');
+      header.textContent = `MATCHING TICKETS (${tickets.length})`;
+      header.style.cssText = 'font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; color: var(--text-muted); padding: 6px 10px 4px;';
+      dropdown.appendChild(header);
+
+      tickets.forEach((t) => {
+        const targetPage =
+          t.status === 'resolved' ? 'adminhistory.html' :
+          t.status === 'active' ? 'adminchat.html' : 'adminqueue.html';
+
+        const badgeBg =
+          t.status === 'resolved' ? 'rgba(52, 199, 89, 0.15)' :
+          t.status === 'active' ? 'rgba(0, 113, 227, 0.15)' : 'rgba(245, 158, 11, 0.15)';
+
+        const badgeColor =
+          t.status === 'resolved' ? '#34c759' :
+          t.status === 'active' ? 'var(--accent-blue)' : '#f59e0b';
+
+        const item = document.createElement('a');
+        item.href = `${targetPage}?q=${encodeURIComponent(t.ticket_code)}`;
+        item.style.cssText = 'display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; text-decoration: none; color: var(--text-main); font-size: 0.86rem; transition: background 0.15s;';
+        item.innerHTML = `
+          <div style="min-width: 0;">
+            <div style="font-weight: 700; color: var(--accent-blue);">${t.ticket_code} <span style="font-weight: 600; color: var(--text-main);">• ${t.customer_name || 'Customer'}</span></div>
+            <div style="font-size: 0.78rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Issue: ${t.issue_summary || 'General Support'}</div>
+          </div>
+          <span style="flex-shrink: 0; padding: 3px 9px; border-radius: 999px; background: ${badgeBg}; color: ${badgeColor}; font-size: 0.72rem; font-weight: 700; text-transform: capitalize;">
+            ${t.status}
+          </span>
+        `;
+
+        item.addEventListener('mouseenter', () => { item.style.background = 'var(--bg-card-hover)'; });
+        item.addEventListener('mouseleave', () => { item.style.background = 'transparent'; });
+        
+        // If already on the target page, filter & highlight immediately without page reload
+        item.addEventListener('click', (e) => {
+          if (window.location.pathname.toLowerCase().endsWith(targetPage.toLowerCase())) {
+            e.preventDefault();
+            searchInput.value = t.ticket_code;
+            dropdown.style.display = 'none';
+            filterCurrentPageRows(t.ticket_code, true);
+          }
+        });
+
+        dropdown.appendChild(item);
+      });
+
+      dropdown.style.display = 'block';
+    }, 150);
+  });
+
+  // Pressing Enter instantly navigates to the top matching ticket
+  searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && latestResults.length > 0) {
+      e.preventDefault();
+      const top = latestResults[0];
+      const targetPage =
+        top.status === 'resolved' ? 'adminhistory.html' :
+        top.status === 'active' ? 'adminchat.html' : 'adminqueue.html';
+      window.location.href = `${targetPage}?q=${encodeURIComponent(top.ticket_code)}`;
+    }
+  });
+
+  // Close dropdown when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!searchBar.contains(e.target)) {
+      dropdown.style.display = 'none';
+    }
+  });
+});
+</script>
 </body>
 </html>

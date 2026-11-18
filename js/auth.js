@@ -91,7 +91,81 @@
       });
     }
 
-/* ---------- SIGN UP (Inserts into Supabase 'users' table) --------------- */
+    /* ---------- SIGN IN (Queries Supabase 'users' table) --------------------- */
+    if (signin) {
+      const email = $('#email');
+      const password = $('#password');
+      const submit = $('[data-submit]', signin);
+
+      [email, password].forEach((i) => {
+        if (i) i.addEventListener('input', () => setFieldError(i, false));
+      });
+
+      signin.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        setStatus(status, '');
+        const emailValue = email.value.trim().toLowerCase();
+        const passValue = password.value;
+
+        if (!isEmail(emailValue)) {
+          setFieldError(email, true);
+          email.focus();
+          return;
+        }
+        if (!passValue) {
+          setFieldError(password, true);
+          password.focus();
+          return;
+        }
+
+        let success = false;
+        setLoading(submit, true, 'Signing in…');
+
+        try {
+          const client = getDb();
+          const { data: user, error } = await client
+            .from('users')
+            .select('*')
+            .ilike('email', emailValue)
+            .maybeSingle();
+
+          if (error) {
+            setStatus(status, 'Database error: ' + error.message, 'error');
+            return;
+          }
+
+          if (!user || user.password !== passValue) {
+            setStatus(status, 'Invalid email or password. Please try again.', 'error');
+            setFieldError(email, true);
+            setFieldError(password, true);
+            return;
+          }
+
+          // Save session to localStorage
+          store.set(KEYS.session, {
+            id: user.id,
+            name: (user.first_name + ' ' + user.last_name).trim(),
+            firstName: user.first_name,
+            email: user.email,
+            role: user.role || 'customer'
+          });
+
+          setStatus(status, 'Signed in successfully. Redirecting…', 'success');
+          success = true;
+
+          setTimeout(() => {
+            const target = next || (user.role === 'admin' ? 'adminpage.html' : 'HomePageMain.html');
+            window.location.href = target;
+          }, 600);
+        } catch (err) {
+          setStatus(status, err.message || 'Unable to connect to database.', 'error');
+        } finally {
+          if (!success) setLoading(submit, false);
+        }
+      });
+    }
+
+    /* ---------- SIGN UP (Inserts into Supabase 'users' table) --------------- */
     if (signup) {
       const first = $('#firstName');
       const middle = $('#middleName');

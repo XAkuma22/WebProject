@@ -20,6 +20,7 @@
       --accent-blue: #3b82f6;
       --accent-blue-glow: rgba(59, 130, 246, 0.25);
       --sidebar-width: 250px;
+      --ease-apple: cubic-bezier(0.22, 1, 0.36, 1);
     }
 
     [data-theme="light"] {
@@ -32,18 +33,19 @@
       --accent-blue: #0071e3;
       --accent-blue-glow: rgba(0, 113, 227, 0.2);
     }
-    
+
     html, body {
       margin: 0;
       padding: 0;
+      width: 100%;
       background: radial-gradient(ellipse 120% 85% at 30% 0%, rgba(59, 130, 246, 0.14) 0%, transparent 80%), var(--bg-main) !important;
       background-attachment: fixed;
       font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif);
       color: var(--text-main);
-      min-height: 100vh;
-      scrollbar-gutter: stable;
+      height: 100vh;
+      overflow: hidden;
       -webkit-font-smoothing: antialiased;
-      transition: background-color 0.3s ease, color 0.3s ease;
+      transition: background-color 0.35s var(--ease-apple), color 0.35s var(--ease-apple);
     }
 
     [data-theme="light"] html, [data-theme="light"] body {
@@ -85,17 +87,12 @@
       font-weight: 700;
       font-size: 1.15rem;
       letter-spacing: -0.02em;
-      white-space: nowrap;
     }
 
     .admin-sidebar__brand img {
       width: 28px;
       height: 28px;
       object-fit: contain;
-    }
-
-    .admin-nav-section {
-      margin-bottom: 24px;
     }
 
     .admin-nav-title {
@@ -117,19 +114,14 @@
       color: var(--text-muted);
       font-weight: 500;
       font-size: 0.9rem;
-      transition: all 0.2s ease;
+      transition: all 0.25s var(--ease-apple);
       margin-bottom: 2px;
-      background: transparent;
-      border: none;
-      width: 100%;
-      cursor: pointer;
-      text-align: left;
-      font-family: inherit;
     }
 
     .admin-nav-item:hover {
       background: var(--bg-card-hover);
       color: var(--text-main);
+      transform: translateX(2px);
     }
 
     .admin-nav-item.active {
@@ -151,9 +143,11 @@
     .admin-wrapper {
       margin-left: 282px;
       width: calc(100% - 282px);
-      min-height: 100vh;
+      height: 100vh;
+      max-height: 100vh;
+      overflow: hidden;
       background: transparent !important;
-      padding: 20px 36px;
+      padding: 20px 36px 24px;
       box-sizing: border-box;
       display: flex;
       flex-direction: column;
@@ -161,14 +155,16 @@
 
     .admin-topbar {
       height: 64px;
+      flex-shrink: 0;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 28px;
+      margin-bottom: 16px;
       gap: 20px;
     }
 
     .search-task-bar {
+      position: relative;
       display: flex;
       align-items: center;
       background: var(--bg-card);
@@ -180,8 +176,7 @@
       gap: 12px;
       color: var(--text-muted);
       font-size: 0.9rem;
-      box-sizing: border-box;
-      transition: border-color 0.2s;
+      transition: border-color 0.25s var(--ease-apple);
     }
 
     .search-task-bar:focus-within {
@@ -244,11 +239,6 @@
       padding: 5px 14px 5px 5px;
       border-radius: 30px;
       cursor: pointer;
-      transition: border-color 0.2s;
-    }
-
-    .user-profile-pill:hover {
-      border-color: var(--accent-blue);
     }
 
     .user-avatar {
@@ -278,11 +268,12 @@
     }
 
     .dashboard-title-area {
-      margin-bottom: 24px;
+      flex-shrink: 0;
+      margin-bottom: 16px;
     }
 
     .dashboard-title-area h1 {
-      font-size: 2rem;
+      font-size: 1.75rem;
       font-weight: 700;
       margin: 0 0 4px 0;
       letter-spacing: -0.03em;
@@ -291,36 +282,71 @@
     .dashboard-title-area p {
       color: var(--text-muted);
       margin: 0;
-      font-size: 0.92rem;
+      font-size: 0.9rem;
     }
 
     .dash-box {
       background: var(--bg-card);
       border: 1px solid var(--border-color);
       border-radius: 18px;
-      padding: 24px;
+      padding: 20px 24px;
       box-sizing: border-box;
       width: 100%;
-      flex-grow: 1;
+      flex: 1;
+      min-height: 0;
       display: flex;
       flex-direction: column;
-      min-height: 600px;
+      overflow: hidden;
     }
 
     .chat-messages {
-      flex-grow: 1;
+      flex: 1;
+      min-height: 0;
       overflow-y: auto;
-      padding-bottom: 20px;
+      padding: 10px 6px 14px 0;
       display: flex;
       flex-direction: column;
       gap: 12px;
+      overscroll-behavior: contain;
+    }
+
+    /* Canned Quick-Reply Bar */
+    .quick-replies-bar {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 0;
+      border-top: 1px solid var(--border-color);
+      overflow-x: auto;
+    }
+
+    .quick-chip {
+      flex-shrink: 0;
+      background: var(--bg-main);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      padding: 5px 12px;
+      border-radius: 999px;
+      font-size: 0.76rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.2s var(--ease-apple);
+    }
+
+    .quick-chip:hover {
+      border-color: var(--accent-blue);
+      color: var(--text-main);
+      background: var(--bg-card-hover);
     }
 
     .chat-input-area {
+      flex-shrink: 0;
       display: flex;
       gap: 12px;
-      padding-top: 16px;
-      border-top: 1px solid var(--border-color);
+      padding-top: 8px;
+      background: var(--bg-card);
     }
 
     .chat-input-area input {
@@ -332,6 +358,10 @@
       color: var(--text-main);
       outline: none;
       font-family: inherit;
+    }
+
+    .chat-input-area input:focus {
+      border-color: var(--accent-blue);
     }
 
     .primary-btn {
@@ -414,8 +444,8 @@
     <header class="admin-topbar">
       <div class="search-task-bar">
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-        <input type="text" id="adminSearchInput" placeholder="Search task or tickets...">
-        <span class="shortcut-badge">⌘K</span>
+        <input type="text" id="adminSearchInput" placeholder="Search ticket ID (e.g. 4387), customer, or issue...">
+        <span class="shortcut-badge">Ctrl K</span>
       </div>
 
       <div class="topbar-actions">
@@ -430,21 +460,21 @@
 
         <div style="position: relative;">
           <div class="user-profile-pill" id="adminProfileTrigger">
-            <div class="user-avatar">A</div>
+            <div class="user-avatar" id="adminAvatarInitial">A</div>
             <div class="user-meta">
-              <div class="name">System Admin</div>
-              <div class="role">admin@passionfruit.com</div>
+              <div class="name" id="adminDisplayName">System Admin</div>
+              <div class="role" id="adminDisplayEmail">admin@passionfruit.com</div>
             </div>
           </div>
 
           <div id="adminProfileDropdown" hidden style="position: absolute; right: 0; top: 50px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; width: 240px; box-shadow: 0 16px 40px rgba(0,0,0,0.3); padding: 14px; z-index: 1000;">
             <div style="padding-bottom: 10px; border-bottom: 1px solid var(--border-color); margin-bottom: 8px;">
-              <div style="font-weight: 700; font-size: 0.9rem;">System Admin</div>
-              <div style="font-size: 0.78rem; color: var(--text-muted);">admin@passionfruit.com</div>
+              <div style="font-weight: 700; font-size: 0.9rem;" id="dropdownAdminName">System Admin</div>
+              <div style="font-size: 0.78rem; color: var(--text-muted);" id="dropdownAdminEmail">admin@passionfruit.com</div>
             </div>
-            <a href="adminpage.html" style="display: block; padding: 8px 10px; color: var(--text-main); text-decoration: none; font-size: 0.85rem; border-radius: 8px;" onmouseover="this.style.background='var(--bg-card-hover)'" onmouseout="this.style.background='transparent'">Dashboard home</a>
+            <a href="adminpage.html" style="display: block; padding: 8px 10px; color: var(--text-main); text-decoration: none; font-size: 0.85rem; border-radius: 8px;">Dashboard home</a>
             <div style="border-top: 1px solid var(--border-color); margin-top: 6px; padding-top: 6px;">
-              <button type="button" id="popoverLogoutBtn" style="width: 100%; text-align: left; background: transparent; border: none; padding: 8px 10px; color: #ef4444; font-size: 0.85rem; font-weight: 600; border-radius: 8px; cursor: pointer;" onmouseover="this.style.background='var(--bg-card-hover)'" onmouseout="this.style.background='transparent'">Log out</button>
+              <button type="button" id="popoverLogoutBtn" style="width: 100%; text-align: left; background: transparent; border: none; padding: 8px 10px; color: #ef4444; font-size: 0.85rem; font-weight: 600; border-radius: 8px; cursor: pointer;">Log out</button>
             </div>
           </div>
         </div>
@@ -457,18 +487,10 @@
     </div>
 
     <div class="dash-box" id="chatWrapperBox"></div>
-
-    <footer style="margin-top: auto; padding-top: 32px; border-top: 1px solid var(--border-color); font-size: 0.82rem; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center; width: 100%;">
-      <div>Passion Fruit Enterprise Admin Portal &copy; 2026 Passion Fruit Inc.</div>
-      <div style="display: flex; gap: 16px;">
-        <span>System Version 2.4.1</span>
-        <span>Secure Enclave Active</span>
-      </div>
-    </footer>
   </div>
 
   <div id="triageModal" hidden style="position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 99999;">
-    <div class="dash-box" style="max-width: 420px; text-align: center;">
+    <div class="dash-box" style="max-width: 420px; height: auto; flex: none; text-align: center;">
       <h3 style="font-size: 1.25rem; font-weight: 700; margin-top: 0; color: var(--text-main);">End Customer Session</h3>
       <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 24px;">Please select the resolution status for this support ticket before closing the channel.</p>
       
@@ -479,8 +501,10 @@
       </div>
     </div>
   </div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/db.js"></script>
+<script src="js/admin-search.js"></script>
 
 <script>
 document.addEventListener('DOMContentLoaded', async () => {
@@ -498,6 +522,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  const session = JSON.parse(localStorage.getItem('pf_session') || '{}');
+  if (session.name) {
+    document.getElementById('adminDisplayName').textContent = session.name;
+    document.getElementById('dropdownAdminName').textContent = session.name;
+    document.getElementById('adminAvatarInitial').textContent = session.name.charAt(0).toUpperCase();
+  }
+  if (session.email) {
+    document.getElementById('adminDisplayEmail').textContent = session.email;
+    document.getElementById('dropdownAdminEmail').textContent = session.email;
+  }
+
   const chatBox = document.getElementById('chatWrapperBox');
   const headerActions = document.getElementById('activeHeaderActions');
   const endConvoBtn = document.getElementById('endConvoBtn');
@@ -508,7 +543,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const sidebarQueueBadge = document.getElementById('sidebarQueueBadge');
   const sidebarActiveBadge = document.getElementById('sidebarActiveBadge');
 
-  const session = JSON.parse(localStorage.getItem('pf_session') || '{}');
   let activeTicket = null;
   let lastMessageSignature = '';
 
@@ -538,7 +572,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (!activeTicket) {
     chatBox.innerHTML = `
-      <div style="text-align: center; padding: 100px 20px; color: var(--text-muted); margin: auto;">
+      <div style="text-align: center; padding: 60px 20px; color: var(--text-muted); margin: auto;">
         <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="margin-bottom: 12px; opacity: 0.5;">
           <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
         </svg>
@@ -549,12 +583,22 @@ document.addEventListener('DOMContentLoaded', async () => {
   } else {
     if (headerActions) headerActions.hidden = false;
 
+    const CANNED_REPLIES = [
+      { label: 'Greeting', text: 'Hi! Thanks for reaching out to Passion Fruit Support. Let me look into this for you right away.' },
+      { label: 'FruitOS Check', text: 'Could you confirm which FruitOS version your device is currently running under Settings > General > About?' },
+      { label: 'Battery Diagnostics', text: 'Please try restarting your device and testing with an official Passion Fruit USB-C / FruitPort cable for 15 minutes.' },
+      { label: 'Closing Check', text: 'Is there anything else I can help you with today before I mark this ticket as resolved?' }
+    ];
+
     chatBox.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:16px; padding-bottom:12px; border-bottom:1px solid var(--border-color);">
+      <div style="flex-shrink: 0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid var(--border-color);">
         <span style="font-weight:600;font-size:0.95rem;">Active Customer: <span style="color:var(--accent-blue);" id="customerName"></span></span>
         <span style="font-size:0.8rem;color:var(--text-muted);">Ticket ID: <span id="ticketId"></span></span>
       </div>
       <div class="chat-messages" id="chatMessages"></div>
+      <div class="quick-replies-bar" id="quickRepliesBar">
+        ${CANNED_REPLIES.map((r, i) => `<button type="button" class="quick-chip" data-reply-idx="${i}">${r.label}</button>`).join('')}
+      </div>
       <div class="chat-input-area">
         <input type="text" id="chatInput" placeholder="Type a message to the customer..." autocomplete="off" maxlength="2000">
         <button type="button" id="sendMsgBtn" class="primary-btn" style="height: 44px; padding: 0 24px;">Send</button>
@@ -567,6 +611,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const messagesContainer = document.getElementById('chatMessages');
     const chatInput = document.getElementById('chatInput');
     const sendMsgBtn = document.getElementById('sendMsgBtn');
+
+    document.querySelectorAll('.quick-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        const idx = Number(chip.getAttribute('data-reply-idx'));
+        chatInput.value = CANNED_REPLIES[idx].text;
+        chatInput.focus();
+      });
+    });
 
     async function renderMessages() {
       if (!activeTicket) return;
@@ -724,6 +776,200 @@ document.addEventListener('DOMContentLoaded', async () => {
       window.location.href = 'Signin.html';
     });
   }
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const searchBar = document.querySelector('.search-task-bar');
+  const searchInput = searchBar ? searchBar.querySelector('input') : null;
+  if (!searchBar || !searchInput) return;
+
+  // 1. Detect OS for shortcut badge (⌘K on Mac, Ctrl K on Windows/Linux)
+  const badge = searchBar.querySelector('.shortcut-badge');
+  if (badge) {
+    badge.textContent = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘K' : 'Ctrl K';
+  }
+
+  // 2. Keyboard shortcuts: Ctrl+K / Cmd+K to focus, Escape to clear & close
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      searchInput.focus();
+      searchInput.select();
+    }
+    if (e.key === 'Escape' && document.activeElement === searchInput) {
+      searchInput.value = '';
+      filterCurrentPageRows('');
+      dropdown.style.display = 'none';
+      searchInput.blur();
+    }
+  });
+
+  // 3. Create floating dropdown container for live Supabase search results
+  searchBar.style.position = 'relative';
+  const dropdown = document.createElement('div');
+  dropdown.id = 'adminSearchDropdown';
+  dropdown.style.cssText = `
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.25);
+    padding: 8px;
+    z-index: 999;
+    display: none;
+    max-height: 360px;
+    overflow-y: auto;
+  `;
+  searchBar.appendChild(dropdown);
+
+  // 4. Real-time table row filtering on the current page
+  function filterCurrentPageRows(query, highlightExact = false) {
+    const q = (query || '').trim().toLowerCase();
+    const rows = document.querySelectorAll('tbody tr, .queue-item, .history-item');
+    rows.forEach((row) => {
+      const text = row.textContent.toLowerCase();
+      const match = !q || text.includes(q);
+      row.style.display = match ? '' : 'none';
+
+      if (q && match && highlightExact) {
+        row.style.background = 'rgba(0, 113, 227, 0.14)';
+        row.style.transition = 'background 0.4s ease';
+        setTimeout(() => { row.style.background = ''; }, 2500);
+      }
+    });
+  }
+
+  // Keep filter active if background polling re-renders table rows
+  const observer = new MutationObserver(() => {
+    if (searchInput.value.trim()) {
+      filterCurrentPageRows(searchInput.value);
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+
+  // Handle URL query deep-linking (?q=4387)
+  const urlQuery = new URLSearchParams(window.location.search).get('q');
+  if (urlQuery) {
+    searchInput.value = urlQuery;
+    setTimeout(() => filterCurrentPageRows(urlQuery, true), 450);
+  }
+
+  // 5. Query Supabase support_tickets table (matches partial codes like "4387", names, or issues)
+  async function searchTickets(raw) {
+    if (!window.db) return [];
+    const clean = raw.replace(/[^a-zA-Z0-9@._-\s]/g, '').trim();
+    if (!clean) return [];
+
+    const { data, error } = await window.db
+      .from('support_tickets')
+      .select('id, ticket_code, customer_name, customer_email, issue_summary, status')
+      .or(`ticket_code.ilike.%${clean}%,customer_name.ilike.%${clean}%,customer_email.ilike.%${clean}%,issue_summary.ilike.%${clean}%`)
+      .order('created_at', { ascending: false })
+      .limit(8);
+
+    return error || !data ? [] : data;
+  }
+
+  let latestResults = [];
+  let searchTimer = null;
+
+  searchInput.addEventListener('input', () => {
+    const raw = searchInput.value.trim();
+    filterCurrentPageRows(raw);
+
+    if (!raw) {
+      latestResults = [];
+      dropdown.style.display = 'none';
+      dropdown.innerHTML = '';
+      return;
+    }
+
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(async () => {
+      const tickets = await searchTickets(raw);
+      latestResults = tickets;
+      dropdown.innerHTML = '';
+
+      if (!tickets.length) {
+        dropdown.innerHTML = `<div style="padding: 12px 14px; font-size: 0.85rem; color: var(--text-muted);">No ticket found matching "<strong>${raw}</strong>"</div>`;
+        dropdown.style.display = 'block';
+        return;
+      }
+
+      const header = document.createElement('div');
+      header.textContent = `MATCHING TICKETS (${tickets.length})`;
+      header.style.cssText = 'font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; color: var(--text-muted); padding: 6px 10px 4px;';
+      dropdown.appendChild(header);
+
+      tickets.forEach((t) => {
+        const targetPage =
+          t.status === 'resolved' ? 'adminhistory.html' :
+          t.status === 'active' ? 'adminchat.html' : 'adminqueue.html';
+
+        const badgeBg =
+          t.status === 'resolved' ? 'rgba(52, 199, 89, 0.15)' :
+          t.status === 'active' ? 'rgba(0, 113, 227, 0.15)' : 'rgba(245, 158, 11, 0.15)';
+
+        const badgeColor =
+          t.status === 'resolved' ? '#34c759' :
+          t.status === 'active' ? 'var(--accent-blue)' : '#f59e0b';
+
+        const item = document.createElement('a');
+        item.href = `${targetPage}?q=${encodeURIComponent(t.ticket_code)}`;
+        item.style.cssText = 'display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; text-decoration: none; color: var(--text-main); font-size: 0.86rem; transition: background 0.15s;';
+        item.innerHTML = `
+          <div style="min-width: 0;">
+            <div style="font-weight: 700; color: var(--accent-blue);">${t.ticket_code} <span style="font-weight: 600; color: var(--text-main);">• ${t.customer_name || 'Customer'}</span></div>
+            <div style="font-size: 0.78rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Issue: ${t.issue_summary || 'General Support'}</div>
+          </div>
+          <span style="flex-shrink: 0; padding: 3px 9px; border-radius: 999px; background: ${badgeBg}; color: ${badgeColor}; font-size: 0.72rem; font-weight: 700; text-transform: capitalize;">
+            ${t.status}
+          </span>
+        `;
+
+        item.addEventListener('mouseenter', () => { item.style.background = 'var(--bg-card-hover)'; });
+        item.addEventListener('mouseleave', () => { item.style.background = 'transparent'; });
+        
+        // If already on the target page, filter & highlight immediately without page reload
+        item.addEventListener('click', (e) => {
+          if (window.location.pathname.toLowerCase().endsWith(targetPage.toLowerCase())) {
+            e.preventDefault();
+            searchInput.value = t.ticket_code;
+            dropdown.style.display = 'none';
+            filterCurrentPageRows(t.ticket_code, true);
+          }
+        });
+
+        dropdown.appendChild(item);
+      });
+
+      dropdown.style.display = 'block';
+    }, 150);
+  });
+
+  // Pressing Enter instantly navigates to the top matching ticket
+  searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && latestResults.length > 0) {
+      e.preventDefault();
+      const top = latestResults[0];
+      const targetPage =
+        top.status === 'resolved' ? 'adminhistory.html' :
+        top.status === 'active' ? 'adminchat.html' : 'adminqueue.html';
+      window.location.href = `${targetPage}?q=${encodeURIComponent(top.ticket_code)}`;
+    }
+  });
+
+  // Close dropdown when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!searchBar.contains(e.target)) {
+      dropdown.style.display = 'none';
+    }
+  });
 });
 </script>
 </body>

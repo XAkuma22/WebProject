@@ -20,6 +20,7 @@
       --accent-blue: #3b82f6;
       --accent-blue-glow: rgba(59, 130, 246, 0.25);
       --sidebar-width: 250px;
+      --ease-apple: cubic-bezier(0.22, 1, 0.36, 1);
     }
 
     [data-theme="light"] {
@@ -32,19 +33,19 @@
       --accent-blue: #0071e3;
       --accent-blue-glow: rgba(0, 113, 227, 0.2);
     }
-    
+
     html, body {
       margin: 0;
       padding: 0;
+      width: 100%;
       background: radial-gradient(ellipse 120% 85% at 30% 0%, rgba(59, 130, 246, 0.14) 0%, transparent 80%), var(--bg-main) !important;
       background-attachment: fixed;
       font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif);
       color: var(--text-main);
-      display: flex;
-      width: 100%;
       min-height: 100vh;
+      overflow-x: hidden;
       -webkit-font-smoothing: antialiased;
-      transition: background-color 0.3s ease, color 0.3s ease;
+      transition: background-color 0.35s var(--ease-apple), color 0.35s var(--ease-apple);
     }
 
     [data-theme="light"] html, [data-theme="light"] body {
@@ -52,7 +53,17 @@
       background-attachment: fixed;
     }
 
-    /* Floating Theme-Responsive Sidebar */
+    .admin-wrapper {
+      margin-left: 282px;
+      width: calc(100% - 282px);
+      min-height: 100vh;
+      background: transparent !important;
+      padding: 20px 36px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+    }
+
     .admin-sidebar {
       width: var(--sidebar-width);
       background: var(--bg-card) !important;
@@ -68,7 +79,7 @@
       padding: 20px 16px;
       box-sizing: border-box;
       box-shadow: 0 20px 45px rgba(0, 0, 0, 0.16), 0 0 0 1px var(--border-color);
-      transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+      transition: background-color 0.35s var(--ease-apple), border-color 0.35s var(--ease-apple);
     }
 
     .admin-sidebar__brand-row {
@@ -88,17 +99,12 @@
       font-weight: 700;
       font-size: 1.15rem;
       letter-spacing: -0.02em;
-      white-space: nowrap;
     }
 
     .admin-sidebar__brand img {
       width: 28px;
       height: 28px;
       object-fit: contain;
-    }
-
-    .admin-nav-section {
-      margin-bottom: 24px;
     }
 
     .admin-nav-title {
@@ -120,19 +126,14 @@
       color: var(--text-muted);
       font-weight: 500;
       font-size: 0.9rem;
-      transition: all 0.2s ease;
+      transition: all 0.25s var(--ease-apple);
       margin-bottom: 2px;
-      background: transparent;
-      border: none;
-      width: 100%;
-      cursor: pointer;
-      text-align: left;
-      font-family: inherit;
     }
 
     .admin-nav-item:hover {
       background: var(--bg-card-hover);
       color: var(--text-main);
+      transform: translateX(2px);
     }
 
     .admin-nav-item.active {
@@ -151,32 +152,18 @@
       margin-left: auto;
     }
 
-    /* Main wrapper area - spans fully to the right edge */
-    .admin-wrapper {
-      margin-left: 282px;
-      width: calc(100% - 282px);
-      flex-grow: 1;
-      min-height: 100vh;
-      background: transparent !important;
-      padding: 20px 36px;
-      box-sizing: border-box;
-      display: flex;
-      flex-direction: column;
-    }
-
-    /* Top navigation header */
     .admin-topbar {
       height: 64px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 28px;
+      margin-bottom: 24px;
       gap: 20px;
       width: 100%;
     }
 
-    /* Stretched search bar reaching until the darkmode button */
     .search-task-bar {
+      position: relative;
       display: flex;
       align-items: center;
       background: var(--bg-card);
@@ -188,12 +175,12 @@
       gap: 12px;
       color: var(--text-muted);
       font-size: 0.9rem;
-      box-sizing: border-box;
-      transition: border-color 0.2s;
+      transition: border-color 0.25s var(--ease-apple), box-shadow 0.25s var(--ease-apple);
     }
 
     .search-task-bar:focus-within {
       border-color: var(--accent-blue);
+      box-shadow: 0 0 0 3px var(--accent-blue-glow);
     }
 
     .search-task-bar input {
@@ -234,7 +221,7 @@
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: all 0.25s var(--ease-apple);
     }
 
     .icon-btn:hover {
@@ -252,7 +239,7 @@
       padding: 5px 14px 5px 5px;
       border-radius: 30px;
       cursor: pointer;
-      transition: border-color 0.2s;
+      transition: border-color 0.25s var(--ease-apple);
     }
 
     .user-profile-pill:hover {
@@ -261,7 +248,7 @@
 
     .user-avatar {
       width: 32px;
-      height: 32px; 
+      height: 32px;
       background: var(--accent-blue);
       color: white;
       border-radius: 50%;
@@ -285,17 +272,16 @@
       line-height: 1.2;
     }
 
-    /* Dashboard Title & Actions */
     .dashboard-title-area {
       display: flex;
       justify-content: space-between;
       align-items: flex-end;
-      margin-bottom: 24px;
+      margin-bottom: 22px;
       width: 100%;
     }
 
     .dashboard-title-area h1 {
-      font-size: 2rem;
+      font-size: 1.9rem;
       font-weight: 700;
       margin: 0 0 4px 0;
       letter-spacing: -0.03em;
@@ -304,16 +290,38 @@
     .dashboard-title-area p {
       color: var(--text-muted);
       margin: 0;
-      font-size: 0.92rem;
+      font-size: 0.9rem;
     }
 
-    .action-buttons-group {
-      display: flex;
-      gap: 10px;
+    .live-sync-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 0.76rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      padding: 7px 13px;
+      border-radius: 999px;
     }
 
-    .primary-btn, .secondary-btn {
-      display: flex;
+    .pulse-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #34c759;
+      animation: pulseRing 2s infinite;
+    }
+
+    @keyframes pulseRing {
+      0% { box-shadow: 0 0 0 0 rgba(52, 199, 89, 0.55); }
+      70% { box-shadow: 0 0 0 6px rgba(52, 199, 89, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(52, 199, 89, 0); }
+    }
+
+    .primary-btn {
+      display: inline-flex;
       align-items: center;
       gap: 8px;
       padding: 10px 18px;
@@ -322,11 +330,8 @@
       font-weight: 600;
       cursor: pointer;
       font-family: inherit;
-      transition: all 0.2s;
+      transition: all 0.25s var(--ease-apple);
       text-decoration: none;
-    }
-
-    .primary-btn {
       background: var(--accent-blue);
       color: white;
       border: none;
@@ -334,25 +339,29 @@
     }
 
     .primary-btn:hover {
-      filter: brightness(1.1);
+      filter: brightness(1.08);
+      transform: translateY(-1px);
     }
 
-    .secondary-btn {
-      background: var(--bg-card);
-      color: var(--text-main);
-      border: 1px solid var(--border-color);
+    /* Skeleton Shimmer Loader */
+    .skeleton {
+      background: linear-gradient(90deg, var(--bg-main) 25%, var(--border-color) 50%, var(--bg-main) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.3s infinite linear;
+      border-radius: 8px;
+      color: transparent !important;
     }
 
-    .secondary-btn:hover {
-      background: var(--bg-card-hover);
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
     }
 
-    /* Metrics Grid */
     .metrics-grid-3 {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 20px;
-      margin-bottom: 24px;
+      gap: 18px;
+      margin-bottom: 20px;
       width: 100%;
     }
 
@@ -360,62 +369,174 @@
       background: var(--bg-card);
       border: 1px solid var(--border-color);
       border-radius: 18px;
-      padding: 22px 24px;
+      padding: 20px 22px;
       box-sizing: border-box;
-      transition: transform 0.2s, border-color 0.2s;
-      width: 100%;
+      transition: transform 0.25s var(--ease-apple), border-color 0.25s var(--ease-apple);
     }
 
     .metric-card:hover {
       transform: translateY(-2px);
-      border-color: rgba(59, 130, 246, 0.4);
+      border-color: rgba(59, 130, 246, 0.45);
+    }
+
+    .metric-card__top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
     }
 
     .metric-card .lbl {
-      font-size: 0.75rem;
+      font-size: 0.74rem;
       text-transform: uppercase;
       letter-spacing: 0.08em;
       color: var(--text-muted);
       font-weight: 700;
-      margin-bottom: 6px;
+    }
+
+    .metric-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .metric-card .val {
-      font-size: 2.3rem;
+      font-size: 2.2rem;
       font-weight: 700;
-      letter-spacing: -0.02em;
+      letter-spacing: -0.03em;
       color: var(--text-main);
+      line-height: 1.1;
+      margin-bottom: 6px;
+      font-variant-numeric: tabular-nums;
     }
 
-    /* Content Grid */
+    .metric-card .sub {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
     .dashboard-grid-2 {
       display: grid;
-      grid-template-columns: 2fr 1fr;
+      grid-template-columns: 1.45fr 1fr;
       gap: 20px;
       width: 100%;
+      margin-bottom: 20px;
     }
 
     .dash-box {
       background: var(--bg-card);
       border: 1px solid var(--border-color);
       border-radius: 18px;
-      padding: 24px;
+      padding: 22px 24px;
       box-sizing: border-box;
       width: 100%;
+      display: flex;
+      flex-direction: column;
     }
 
-    @media(max-width: 900px) {
+    .box-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .box-header h2 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    .box-link {
+      font-size: 0.82rem;
+      color: var(--accent-blue);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .ratio-bar {
+      height: 10px;
+      width: 100%;
+      background: var(--bg-main);
+      border-radius: 999px;
+      overflow: hidden;
+      display: flex;
+      gap: 2px;
+      margin: 10px 0 14px 0;
+    }
+
+    .topic-row {
+      margin-bottom: 12px;
+    }
+
+    .topic-row__meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.82rem;
+      margin-bottom: 5px;
+    }
+
+    .topic-track {
+      height: 6px;
+      background: var(--bg-main);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .topic-fill {
+      height: 100%;
+      background: var(--accent-blue);
+      border-radius: 999px;
+      transition: width 0.55s var(--ease-apple);
+    }
+
+    /* Slide-Over Transcript Drawer */
+    .transcript-drawer-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.55);
+      backdrop-filter: blur(4px);
+      z-index: 9999;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .transcript-drawer-backdrop[hidden] {
+      display: none !important;
+    }
+
+    .transcript-drawer {
+      width: 100%;
+      max-width: 460px;
+      height: 100vh;
+      background: var(--bg-card);
+      border-left: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      padding: 24px;
+      box-sizing: border-box;
+      box-shadow: -20px 0 50px rgba(0, 0, 0, 0.35);
+      animation: drawerSlideIn 0.3s var(--ease-apple);
+    }
+
+    @keyframes drawerSlideIn {
+      from { transform: translateX(100%); }
+      to { transform: translateX(0); }
+    }
+
+    @media(max-width: 960px) {
       .admin-sidebar { display: none; }
       .admin-wrapper { margin-left: 0; width: 100%; padding: 16px; }
       .metrics-grid-3 { grid-template-columns: 1fr; }
       .dashboard-grid-2 { grid-template-columns: 1fr; }
     }
   </style>
-  
 </head>
 <body>
 
-  <!-- Floating Theme-Responsive Sidebar -->
   <aside class="admin-sidebar" id="adminSidebar">
     <div class="admin-sidebar__brand-row">
       <a class="admin-sidebar__brand" href="adminpage.html">
@@ -424,7 +545,6 @@
       </a>
     </div>
 
-    <!-- MENU Group -->
     <div class="admin-nav-section">
       <div class="admin-nav-title">Menu</div>
       <a class="admin-nav-item active" href="adminpage.html">
@@ -448,25 +568,19 @@
     </div>
   </aside>
 
-  <!-- Main Wrapper -->
   <div class="admin-wrapper">
-
-    <!-- Topbar -->
     <header class="admin-topbar">
-      <!-- Stretched Search Bar -->
       <div class="search-task-bar">
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-        <input type="text" id="adminGlobalSearch" placeholder="Search task or tickets...">
-        <span class="shortcut-badge">⌘K</span>
+        <input type="text" id="adminSearchInput" placeholder="Search ticket ID (e.g. 4387), customer, or issue...">
+        <span class="shortcut-badge">Ctrl K</span>
       </div>
 
       <div class="topbar-actions">
-        <!-- Theme Toggle Button -->
         <button type="button" data-theme-toggle class="icon-btn" aria-label="Toggle theme">
           <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
         </button>
 
-        <!-- Profile Pill Dropdown Trigger -->
         <div style="position: relative;">
           <div class="user-profile-pill" id="adminProfileTrigger">
             <div class="user-avatar">A</div>
@@ -476,173 +590,568 @@
             </div>
           </div>
 
-          <!-- Popover Menu -->
           <div id="adminProfileDropdown" hidden style="position: absolute; right: 0; top: 50px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; width: 240px; box-shadow: 0 16px 40px rgba(0,0,0,0.3); padding: 14px; z-index: 1000;">
             <div style="padding-bottom: 10px; border-bottom: 1px solid var(--border-color); margin-bottom: 8px;">
               <div style="font-weight: 700; font-size: 0.9rem;">System Admin</div>
               <div style="font-size: 0.78rem; color: var(--text-muted);">admin@passionfruit.com</div>
             </div>
-            <a href="adminpage.html" style="display: block; padding: 8px 10px; color: var(--text-main); text-decoration: none; font-size: 0.85rem; border-radius: 8px;" onmouseover="this.style.background='var(--bg-card-hover)'" onmouseout="this.style.background='transparent'">Dashboard home</a>
+            <a href="adminpage.html" style="display: block; padding: 8px 10px; color: var(--text-main); text-decoration: none; font-size: 0.85rem; border-radius: 8px;">Dashboard home</a>
             <div style="border-top: 1px solid var(--border-color); margin-top: 6px; padding-top: 6px;">
-              <button type="button" id="popoverLogoutBtn" style="width: 100%; text-align: left; background: transparent; border: none; padding: 8px 10px; color: #ef4444; font-size: 0.85rem; font-weight: 600; border-radius: 8px; cursor: pointer;" onmouseover="this.style.background='var(--bg-card-hover)'" onmouseout="this.style.background='transparent'">Log out</button>
+              <button type="button" id="popoverLogoutBtn" style="width: 100%; text-align: left; background: transparent; border: none; padding: 8px 10px; color: #ef4444; font-size: 0.85rem; font-weight: 600; border-radius: 8px; cursor: pointer;">Log out</button>
             </div>
           </div>
         </div>
       </div>
     </header>
 
-    <!-- Dashboard Title & Actions -->
     <div class="dashboard-title-area">
       <div>
-        <h1>Dashboard</h1>
-        <p>Monitor customer support tickets, live chat routing, and ticket resolutions.</p>
+        <h1>Support Command Center</h1>
+        <p>Live triage, active session telemetry, and issue breakdown across Passion Fruit Support.</p>
       </div>
-      <div class="action-buttons-group">
-        <a href="adminqueue.html" class="primary-btn">
-          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>
-          Add Ticket
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span class="live-sync-pill" id="syncStatusPill">
+          <span class="pulse-dot"></span>
+          <span id="syncStatusText">Live Sync</span>
+        </span>
+        <a href="adminqueue.html" id="dashboardPrimaryCta" class="primary-btn">
+          Open Support Queue
         </a>
       </div>
     </div>
 
-    <!-- 3 Metric Cards Row (Pending, Active Chat, Resolved Archives) -->
     <div class="metrics-grid-3">
       <div class="metric-card">
-        <div class="lbl">Pending Queue</div>
-        <div class="val" id="metricPending">0</div>
+        <div class="metric-card__top">
+          <span class="lbl">Pending Queue</span>
+          <span class="metric-icon" style="background: rgba(245, 158, 11, 0.14); color: #f59e0b;">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          </span>
+        </div>
+        <div class="val skeleton" id="metricPending">0</div>
+        <div class="sub" id="subPending">Checking incoming queue...</div>
       </div>
+
       <div class="metric-card">
-        <div class="lbl">Active Live Chat</div>
-        <div class="val" id="metricActiveChat">0</div>
+        <div class="metric-card__top">
+          <span class="lbl">Active Live Chat</span>
+          <span class="metric-icon" style="background: rgba(52, 199, 89, 0.14); color: #34c759;">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+          </span>
+        </div>
+        <div class="val skeleton" id="metricActiveChat">0</div>
+        <div class="sub" id="subActive">Checking active channels...</div>
       </div>
+
       <div class="metric-card">
-        <div class="lbl">Resolved Archives</div>
-        <div class="val" id="metricResolved">0</div>
+        <div class="metric-card__top">
+          <span class="lbl">Resolved Archives</span>
+          <span class="metric-icon" style="background: rgba(59, 130, 246, 0.14); color: var(--accent-blue);">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </span>
+        </div>
+        <div class="val skeleton" id="metricResolved">0</div>
+        <div class="sub" id="subResolved">Calculating resolution rate...</div>
       </div>
     </div>
 
-    <!-- Content Grid -->
     <div class="dashboard-grid-2">
       <div class="dash-box">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-          <h2 style="font-size: 1.1rem; font-weight: 600; margin: 0;">Support Queue Preview</h2>
-          <a href="adminqueue.html" style="font-size: 0.85rem; color: var(--accent-blue); text-decoration: none; font-weight: 600;">View All Queue</a>
+        <div class="box-header">
+          <h2>Incoming Queue Triage</h2>
+          <a href="adminqueue.html" class="box-link">Full Queue ›</a>
         </div>
-        <div id="previewQueueList" style="display: flex; flex-direction: column; gap: 10px;">
-          <p style="color: var(--text-muted); font-size: 0.85rem; margin: 10px 0; text-align: center; padding: 20px;">No pending tickets in the support queue.</p>
+        <div id="previewQueueList" style="display: flex; flex-direction: column; gap: 10px; flex: 1;">
+          <div class="skeleton" style="height: 54px;"></div>
+          <div class="skeleton" style="height: 54px;"></div>
+        </div>
+
+        <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-color);">
+          <div class="box-header" style="margin-bottom: 12px;">
+            <h2>Recently Resolved <span style="font-size: 0.74rem; color: var(--text-muted); font-weight: 400;">(Click to inspect transcript)</span></h2>
+            <a href="adminhistory.html" class="box-link">Archives ›</a>
+          </div>
+          <div id="previewResolvedList" style="display: flex; flex-direction: column; gap: 8px;"></div>
         </div>
       </div>
 
       <div class="dash-box">
-        <h2 style="font-size: 1.1rem; font-weight: 600; margin: 0 0 16px 0;">Quick Navigation</h2>
-        <div style="display: flex; flex-direction: column; gap: 12px;">
-          <a href="adminqueue.html" style="display: block; padding: 14px; background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 12px; text-decoration: none; color: var(--text-main); transition: border-color 0.2s;" onmouseover="this.style.borderColor='var(--accent-blue)'" onmouseout="this.style.borderColor='var(--border-color)'">
-            <div style="font-weight: 600; color: var(--accent-blue); margin-bottom: 2px;">Support Queue</div>
-            <div style="font-size: 0.82rem; color: var(--text-muted);">Accept incoming user inquiries & start chat sessions.</div>
-          </a>
-          <a href="adminchat.html" style="display: block; padding: 14px; background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 12px; text-decoration: none; color: var(--text-main); transition: border-color 0.2s;" onmouseover="this.style.borderColor='#34c759'" onmouseout="this.style.borderColor='var(--border-color)'">
-            <div style="font-weight: 600; color: #34c759; margin-bottom: 2px;">Live Chat Room</div>
-            <div style="font-size: 0.82rem; color: var(--text-muted);">Manage active customer troubleshooting channels.</div>
-          </a>
-          <a href="adminhistory.html" style="display: block; padding: 14px; background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 12px; text-decoration: none; color: var(--text-main); transition: border-color 0.2s;" onmouseover="this.style.borderColor='var(--accent-blue)'" onmouseout="this.style.borderColor='var(--border-color)'">
-            <div style="font-weight: 600; color: var(--text-main); margin-bottom: 2px;">Ticket Archives</div>
-            <div style="font-size: 0.82rem; color: var(--text-muted);">Review resolved and transferred customer histories.</div>
-          </a>
+        <div class="box-header">
+          <h2>Ticket Distribution & Top Issues</h2>
+        </div>
+
+        <div style="font-size: 0.82rem; color: var(--text-muted);">Overall Pipeline Ratio</div>
+        <div class="ratio-bar">
+          <div id="barPending" style="background: #f59e0b; width: 0%; transition: width 0.5s var(--ease-apple);"></div>
+          <div id="barActive" style="background: #34c759; width: 0%; transition: width 0.5s var(--ease-apple);"></div>
+          <div id="barResolved" style="background: var(--accent-blue); width: 100%; transition: width 0.5s var(--ease-apple);"></div>
+        </div>
+        <div style="display: flex; gap: 14px; font-size: 0.76rem; color: var(--text-muted); margin-bottom: 22px;">
+          <span>● Pending</span>
+          <span style="color: #34c759;">● Active</span>
+          <span style="color: var(--accent-blue);">● Resolved</span>
+        </div>
+
+        <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 12px;">
+          Top Reported Topics
+        </div>
+        <div id="topTopicsContainer">
+          <div class="skeleton" style="height: 28px; margin-bottom: 10px;"></div>
+          <div class="skeleton" style="height: 28px; margin-bottom: 10px;"></div>
         </div>
       </div>
     </div>
 
-    <!-- Footer -->
-    <footer style="margin-top: auto; padding-top: 32px; border-top: 1px solid var(--border-color); font-size: 0.82rem; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center;">
-      <div>Passion Fruit Enterprise Admin Portal &copy; 2026 Passion Fruit Inc.</div>
-      <div style="display: flex; gap: 16px;">
+    <footer style="margin-top: auto; padding-top: 18px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; color: var(--text-muted); flex-shrink: 0;">
+      <span>Passion Fruit Enterprise Admin Portal © 2026 Passion Fruit Inc.</span>
+      <div style="display: flex; align-items: center; gap: 16px;">
         <span>System Version 2.4.1</span>
-        <span>Secure Enclave Active</span>
+        <span style="display: inline-flex; align-items: center; gap: 6px;">
+          <span style="width: 7px; height: 7px; border-radius: 50%; background: #34c759; box-shadow: 0 0 0 3px rgba(52, 199, 89, 0.2);"></span>
+          Secure Enclave Active
+        </span>
       </div>
     </footer>
   </div>
+
+  <!-- Slide-Over Chat Transcript Inspector Drawer -->
+  <div class="transcript-drawer-backdrop" id="transcriptBackdrop" hidden>
+    <div class="transcript-drawer">
+      <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 14px; border-bottom: 1px solid var(--border-color); margin-bottom: 14px;">
+        <div>
+          <div style="font-weight: 700; font-size: 1rem;" id="drawerTicketTitle">Ticket Transcript</div>
+          <div style="font-size: 0.78rem; color: var(--text-muted);" id="drawerTicketMeta">Loading conversation...</div>
+        </div>
+        <button type="button" id="closeTranscriptBtn" class="icon-btn" aria-label="Close transcript">✕</button>
+      </div>
+      <div id="drawerMessagesBody" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 4px;"></div>
+    </div>
+  </div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/db.js"></script>
+<script src="js/admin-search.js"></script>
 
-  <script>
-    document.addEventListener('DOMContentLoaded', async () => {
-      const themeToggleBtn = document.querySelector('[data-theme-toggle]');
-      const htmlEl = document.documentElement;
-      const savedTheme = localStorage.getItem('pf_theme') || 'dark';
-      htmlEl.setAttribute('data-theme', savedTheme);
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  const themeToggleBtn = document.querySelector('[data-theme-toggle]');
+  const htmlEl = document.documentElement;
+  const savedTheme = localStorage.getItem('pf_theme') || 'dark';
+  htmlEl.setAttribute('data-theme', savedTheme);
 
-      if (themeToggleBtn) {
-        themeToggleBtn.addEventListener('click', () => {
-          const current = htmlEl.getAttribute('data-theme');
-          const next = current === 'dark' ? 'light' : 'dark';
-          htmlEl.setAttribute('data-theme', next);
-          localStorage.setItem('pf_theme', next);
+  if (themeToggleBtn) {
+    themeToggleBtn.addEventListener('click', () => {
+      const current = htmlEl.getAttribute('data-theme');
+      const next = current === 'dark' ? 'light' : 'dark';
+      htmlEl.setAttribute('data-theme', next);
+      localStorage.setItem('pf_theme', next);
+    });
+  }
+
+  const session = JSON.parse(localStorage.getItem('pf_session') || '{}');
+  const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  function timeAgo(iso) {
+    if (!iso) return 'just now';
+    const mins = Math.max(1, Math.floor((Date.now() - new Date(iso).getTime()) / 60000));
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    return hrs < 24 ? `${hrs}h ago` : `${Math.floor(hrs / 24)}d ago`;
+  }
+
+  function animateValue(el, target) {
+    el.classList.remove('skeleton');
+    const start = parseInt(el.textContent, 10) || 0;
+    if (start === target) { el.textContent = target; return; }
+    const duration = 350;
+    const t0 = performance.now();
+    function step(now) {
+      const p = Math.min(1, (now - t0) / duration);
+      el.textContent = Math.round(start + (target - start) * p);
+      if (p < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  // Slide-over transcript viewer
+  const backdrop = document.getElementById('transcriptBackdrop');
+  const closeDrawerBtn = document.getElementById('closeTranscriptBtn');
+  const drawerTitle = document.getElementById('drawerTicketTitle');
+  const drawerMeta = document.getElementById('drawerTicketMeta');
+  const drawerBody = document.getElementById('drawerMessagesBody');
+
+  async function openTranscript(ticket) {
+    drawerTitle.textContent = `${ticket.ticket_code} • ${ticket.customer_name || 'Customer'}`;
+    drawerMeta.textContent = `Issue: ${ticket.issue_summary || 'General'} • Status: ${ticket.status}`;
+    drawerBody.innerHTML = `<div class="skeleton" style="height: 44px; width: 75%;"></div><div class="skeleton" style="height: 44px; width: 75%; align-self: flex-end;"></div>`;
+    backdrop.hidden = false;
+
+    const { data: msgs } = await window.db
+      .from('chat_messages')
+      .select('*')
+      .eq('ticket_id', ticket.id)
+      .order('sent_at', { ascending: true });
+
+    if (!msgs || !msgs.length) {
+      drawerBody.innerHTML = `<p style="color: var(--text-muted); text-align: center; margin: auto;">No chat messages recorded for this ticket.</p>`;
+      return;
+    }
+
+    drawerBody.innerHTML = msgs.map(m => {
+      const isAdmin = m.sender_role === 'admin';
+      return `
+        <div style="display: flex; flex-direction: column; align-items: ${isAdmin ? 'flex-end' : 'flex-start'};">
+          <span style="font-size: 0.68rem; color: var(--text-muted); margin: 0 4px 2px;">${esc(m.sender_name || (isAdmin ? 'Support' : 'Customer'))}</span>
+          <div style="max-width: 82%; padding: 10px 14px; border-radius: 14px; font-size: 0.85rem; white-space: pre-wrap; background: ${isAdmin ? 'var(--accent-blue)' : 'var(--bg-main)'}; color: ${isAdmin ? '#fff' : 'var(--text-main)'}; border: ${isAdmin ? 'none' : '1px solid var(--border-color)'};">${esc(m.message_text)}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  closeDrawerBtn.addEventListener('click', () => { backdrop.hidden = true; });
+  backdrop.addEventListener('click', (e) => { if (e.target === backdrop) backdrop.hidden = true; });
+
+  async function refreshDashboard() {
+    const { data: allTickets, error } = await window.db
+      .from('support_tickets')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error || !allTickets) return;
+
+    const pending = allTickets.filter(t => t.status === 'waiting');
+    const active = allTickets.filter(t => t.status === 'active');
+    const resolved = allTickets.filter(t => t.status === 'resolved');
+    const total = allTickets.length || 1;
+
+    animateValue(document.getElementById('metricPending'), pending.length);
+    animateValue(document.getElementById('metricActiveChat'), active.length);
+    animateValue(document.getElementById('metricResolved'), resolved.length);
+
+    document.getElementById('sidebarQueueBadge').textContent = pending.length;
+    document.getElementById('sidebarActiveBadge').textContent = active.length;
+    document.getElementById('syncStatusText').textContent = `Synced ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+
+    document.getElementById('subPending').textContent = pending.length
+      ? `Oldest waiting: ${timeAgo(pending[pending.length - 1].created_at)}`
+      : 'All incoming inquiries cleared';
+
+    document.getElementById('subActive').textContent = active.length
+      ? `Connected with ${active[0].customer_name || 'customer'}`
+      : 'Agent channel idle & ready';
+
+    const rate = allTickets.length ? Math.round((resolved.length / allTickets.length) * 100) : 0;
+    document.getElementById('subResolved').textContent = `${rate}% overall resolution rate`;
+
+    document.getElementById('barPending').style.width = `${(pending.length / total) * 100}%`;
+    document.getElementById('barActive').style.width = `${(active.length / total) * 100}%`;
+    document.getElementById('barResolved').style.width = `${(resolved.length / total) * 100}%`;
+
+    const cta = document.getElementById('dashboardPrimaryCta');
+    if (active.length > 0) {
+      cta.href = 'adminchat.html';
+      cta.textContent = 'Resume Active Chat';
+      cta.style.background = '#34c759';
+    } else {
+      cta.href = 'adminqueue.html';
+      cta.textContent = 'Open Support Queue';
+      cta.style.background = 'var(--accent-blue)';
+    }
+
+    const previewQueueList = document.getElementById('previewQueueList');
+    if (pending.length === 0) {
+      previewQueueList.innerHTML = `<p style="color: var(--text-muted); font-size: 0.85rem; margin: 10px 0; text-align: center; padding: 20px;">No pending tickets in the support queue.</p>`;
+    } else {
+      previewQueueList.innerHTML = pending.slice(0, 3).map(t => `
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 14px; background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 12px;">
+          <div style="min-width: 0;">
+            <div style="font-weight: 600; font-size: 0.86rem;"><span style="color: var(--accent-blue);">${esc(t.ticket_code)}</span> • ${esc(t.customer_name)} <span style="font-size: 0.74rem; color: var(--text-muted); font-weight: 400;">(${timeAgo(t.created_at)})</span></div>
+            <div style="font-size: 0.78rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${esc(t.issue_summary)}</div>
+          </div>
+          <button type="button" class="quick-accept-btn" data-id="${t.id}" style="flex-shrink: 0; background: var(--accent-blue); color: white; border: none; padding: 6px 14px; border-radius: 8px; font-size: 0.78rem; font-weight: 600; cursor: pointer;">Accept</button>
+        </div>
+      `).join('');
+
+      document.querySelectorAll('.quick-accept-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (active.length > 0) {
+            alert('You already have an active chat session. End or transfer it before accepting another ticket.');
+            return;
+          }
+          const ticketId = btn.getAttribute('data-id');
+          const { error: updErr } = await window.db
+            .from('support_tickets')
+            .update({ status: 'active', assigned_admin: session.name || 'System Admin' })
+            .eq('id', ticketId);
+          if (!updErr) window.location.href = 'adminchat.html';
         });
-      }
+      });
+    }
 
-      const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const previewResolvedList = document.getElementById('previewResolvedList');
+    if (resolved.length === 0) {
+      previewResolvedList.innerHTML = `<p style="color: var(--text-muted); font-size: 0.82rem; margin: 0;">No resolved tickets yet.</p>`;
+    } else {
+      previewResolvedList.innerHTML = resolved.slice(0, 3).map((t, idx) => `
+        <button type="button" class="inspect-resolved-btn" data-idx="${idx}" style="width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 10px; color: inherit; font-size: 0.82rem; cursor: pointer; font-family: inherit; text-align: left;">
+          <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><strong>${esc(t.ticket_code)}</strong> • ${esc(t.customer_name)} (${esc(t.issue_summary)})</span>
+          <span style="color: #34c759; font-weight: 600; font-size: 0.74rem; margin-left: 10px; flex-shrink: 0;">View Log ›</span>
+        </button>
+      `).join('');
 
-      async function refreshDashboard() {
-        const { data: allTickets, error } = await window.db
-          .from('support_tickets')
-          .select('*')
-          .order('created_at', { ascending: true });
-
-        if (error) {
-          console.error('Supabase dashboard error:', error.message);
-          return;
-        }
-
-        const pending = allTickets.filter(t => t.status === 'waiting');
-        const active = allTickets.filter(t => t.status === 'active');
-        const resolved = allTickets.filter(t => t.status === 'resolved');
-
-        document.getElementById('metricPending').textContent = pending.length;
-        document.getElementById('metricActiveChat').textContent = active.length;
-        document.getElementById('metricResolved').textContent = resolved.length;
-        document.getElementById('sidebarQueueBadge').textContent = pending.length;
-        document.getElementById('sidebarActiveBadge').textContent = active.length;
-
-        const previewQueueList = document.getElementById('previewQueueList');
-        if (pending.length === 0) {
-          previewQueueList.innerHTML = `<p style="color: var(--text-muted); font-size: 0.85rem; margin: 10px 0; text-align: center; padding: 20px;">No pending tickets in the support queue.</p>`;
-        } else {
-          previewQueueList.innerHTML = pending.slice(0, 4).map(t => `
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 10px;">
-              <div>
-                <div style="font-weight: 600; font-size: 0.85rem; color: var(--text-main);">${esc(t.customer_name)}</div>
-                <div style="font-size: 0.75rem; color: var(--text-muted);">${esc(t.issue_summary)}</div>
-              </div>
-              <a href="adminqueue.html" style="background: var(--accent-blue); color: white; padding: 5px 12px; border-radius: 6px; font-size: 0.75rem; text-decoration: none; font-weight: 600;">Review</a>
-            </div>
-          `).join('');
-        }
-      }
-
-      await refreshDashboard();
-      setInterval(refreshDashboard, 4000);
-
-      const trigger = document.getElementById('adminProfileTrigger');
-      const dropdown = document.getElementById('adminProfileDropdown');
-      if (trigger && dropdown) {
-        trigger.addEventListener('click', (e) => {
-          e.stopPropagation();
-          dropdown.hidden = !dropdown.hidden;
+      document.querySelectorAll('.inspect-resolved-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const item = resolved[Number(btn.getAttribute('data-idx'))];
+          if (item) openTranscript(item);
         });
-        document.addEventListener('click', (e) => {
-          if (!dropdown.contains(e.target) && !trigger.contains(e.target)) dropdown.hidden = true;
-        });
-      }
+      });
+    }
 
-      const logoutBtn = document.getElementById('popoverLogoutBtn');
-      if (logoutBtn) {
-        logoutBtn.addEventListener('click', () => {
-          localStorage.removeItem('pf_session');
-          localStorage.removeItem('pf_active_agent');
-          window.location.href = 'Signin.html';
-        });
+    const topicCounts = {};
+    allTickets.forEach(t => {
+      const label = (t.issue_summary || 'General Inquiry').trim();
+      const key = label.charAt(0).toUpperCase() + label.slice(1).toLowerCase();
+      topicCounts[key] = (topicCounts[key] || 0) + 1;
+    });
+
+    const sortedTopics = Object.entries(topicCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    const topicsEl = document.getElementById('topTopicsContainer');
+    if (!sortedTopics.length) {
+      topicsEl.innerHTML = `<p style="color: var(--text-muted); font-size: 0.84rem;">No tickets logged yet.</p>`;
+    } else {
+      const maxCount = sortedTopics[0][1] || 1;
+      topicsEl.innerHTML = sortedTopics.map(([topic, count]) => `
+        <div class="topic-row">
+          <div class="topic-row__meta">
+            <span style="font-weight: 500;">${esc(topic)}</span>
+            <span style="color: var(--text-muted);">${count} ticket${count > 1 ? 's' : ''}</span>
+          </div>
+          <div class="topic-track">
+            <div class="topic-fill" style="width: ${(count / maxCount) * 100}%;"></div>
+          </div>
+        </div>
+      `).join('');
+    }
+  }
+
+  await refreshDashboard();
+  setInterval(refreshDashboard, 4000);
+
+  const trigger = document.getElementById('adminProfileTrigger');
+  const dropdown = document.getElementById('adminProfileDropdown');
+  if (trigger && dropdown) {
+    trigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dropdown.hidden = !dropdown.hidden;
+    });
+    document.addEventListener('click', (e) => {
+      if (!dropdown.contains(e.target) && !trigger.contains(e.target)) dropdown.hidden = true;
+    });
+  }
+
+  const logoutBtn = document.getElementById('popoverLogoutBtn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+      localStorage.removeItem('pf_session');
+      localStorage.removeItem('pf_active_agent');
+      window.location.href = 'Signin.html';
+    });
+  }
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const searchBar = document.querySelector('.search-task-bar');
+  const searchInput = searchBar ? searchBar.querySelector('input') : null;
+  if (!searchBar || !searchInput) return;
+
+  // 1. Detect OS for shortcut badge (⌘K on Mac, Ctrl K on Windows/Linux)
+  const badge = searchBar.querySelector('.shortcut-badge');
+  if (badge) {
+    badge.textContent = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘K' : 'Ctrl K';
+  }
+
+  // 2. Keyboard shortcuts: Ctrl+K / Cmd+K to focus, Escape to clear & close
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      searchInput.focus();
+      searchInput.select();
+    }
+    if (e.key === 'Escape' && document.activeElement === searchInput) {
+      searchInput.value = '';
+      filterCurrentPageRows('');
+      dropdown.style.display = 'none';
+      searchInput.blur();
+    }
+  });
+
+  // 3. Create floating dropdown container for live Supabase search results
+  searchBar.style.position = 'relative';
+  const dropdown = document.createElement('div');
+  dropdown.id = 'adminSearchDropdown';
+  dropdown.style.cssText = `
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.25);
+    padding: 8px;
+    z-index: 999;
+    display: none;
+    max-height: 360px;
+    overflow-y: auto;
+  `;
+  searchBar.appendChild(dropdown);
+
+  // 4. Real-time table row filtering on the current page
+  function filterCurrentPageRows(query, highlightExact = false) {
+    const q = (query || '').trim().toLowerCase();
+    const rows = document.querySelectorAll('tbody tr, .queue-item, .history-item');
+    rows.forEach((row) => {
+      const text = row.textContent.toLowerCase();
+      const match = !q || text.includes(q);
+      row.style.display = match ? '' : 'none';
+
+      if (q && match && highlightExact) {
+        row.style.background = 'rgba(0, 113, 227, 0.14)';
+        row.style.transition = 'background 0.4s ease';
+        setTimeout(() => { row.style.background = ''; }, 2500);
       }
     });
-  </script>
+  }
+
+  // Keep filter active if background polling re-renders table rows
+  const observer = new MutationObserver(() => {
+    if (searchInput.value.trim()) {
+      filterCurrentPageRows(searchInput.value);
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+
+  // Handle URL query deep-linking (?q=4387)
+  const urlQuery = new URLSearchParams(window.location.search).get('q');
+  if (urlQuery) {
+    searchInput.value = urlQuery;
+    setTimeout(() => filterCurrentPageRows(urlQuery, true), 450);
+  }
+
+  // 5. Query Supabase support_tickets table (matches partial codes like "4387", names, or issues)
+  async function searchTickets(raw) {
+    if (!window.db) return [];
+    const clean = raw.replace(/[^a-zA-Z0-9@._-\s]/g, '').trim();
+    if (!clean) return [];
+
+    const { data, error } = await window.db
+      .from('support_tickets')
+      .select('id, ticket_code, customer_name, customer_email, issue_summary, status')
+      .or(`ticket_code.ilike.%${clean}%,customer_name.ilike.%${clean}%,customer_email.ilike.%${clean}%,issue_summary.ilike.%${clean}%`)
+      .order('created_at', { ascending: false })
+      .limit(8);
+
+    return error || !data ? [] : data;
+  }
+
+  let latestResults = [];
+  let searchTimer = null;
+
+  searchInput.addEventListener('input', () => {
+    const raw = searchInput.value.trim();
+    filterCurrentPageRows(raw);
+
+    if (!raw) {
+      latestResults = [];
+      dropdown.style.display = 'none';
+      dropdown.innerHTML = '';
+      return;
+    }
+
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(async () => {
+      const tickets = await searchTickets(raw);
+      latestResults = tickets;
+      dropdown.innerHTML = '';
+
+      if (!tickets.length) {
+        dropdown.innerHTML = `<div style="padding: 12px 14px; font-size: 0.85rem; color: var(--text-muted);">No ticket found matching "<strong>${raw}</strong>"</div>`;
+        dropdown.style.display = 'block';
+        return;
+      }
+
+      const header = document.createElement('div');
+      header.textContent = `MATCHING TICKETS (${tickets.length})`;
+      header.style.cssText = 'font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; color: var(--text-muted); padding: 6px 10px 4px;';
+      dropdown.appendChild(header);
+
+      tickets.forEach((t) => {
+        const targetPage =
+          t.status === 'resolved' ? 'adminhistory.html' :
+          t.status === 'active' ? 'adminchat.html' : 'adminqueue.html';
+
+        const badgeBg =
+          t.status === 'resolved' ? 'rgba(52, 199, 89, 0.15)' :
+          t.status === 'active' ? 'rgba(0, 113, 227, 0.15)' : 'rgba(245, 158, 11, 0.15)';
+
+        const badgeColor =
+          t.status === 'resolved' ? '#34c759' :
+          t.status === 'active' ? 'var(--accent-blue)' : '#f59e0b';
+
+        const item = document.createElement('a');
+        item.href = `${targetPage}?q=${encodeURIComponent(t.ticket_code)}`;
+        item.style.cssText = 'display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; text-decoration: none; color: var(--text-main); font-size: 0.86rem; transition: background 0.15s;';
+        item.innerHTML = `
+          <div style="min-width: 0;">
+            <div style="font-weight: 700; color: var(--accent-blue);">${t.ticket_code} <span style="font-weight: 600; color: var(--text-main);">• ${t.customer_name || 'Customer'}</span></div>
+            <div style="font-size: 0.78rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Issue: ${t.issue_summary || 'General Support'}</div>
+          </div>
+          <span style="flex-shrink: 0; padding: 3px 9px; border-radius: 999px; background: ${badgeBg}; color: ${badgeColor}; font-size: 0.72rem; font-weight: 700; text-transform: capitalize;">
+            ${t.status}
+          </span>
+        `;
+
+        item.addEventListener('mouseenter', () => { item.style.background = 'var(--bg-card-hover)'; });
+        item.addEventListener('mouseleave', () => { item.style.background = 'transparent'; });
+        
+        // If already on the target page, filter & highlight immediately without page reload
+        item.addEventListener('click', (e) => {
+          if (window.location.pathname.toLowerCase().endsWith(targetPage.toLowerCase())) {
+            e.preventDefault();
+            searchInput.value = t.ticket_code;
+            dropdown.style.display = 'none';
+            filterCurrentPageRows(t.ticket_code, true);
+          }
+        });
+
+        dropdown.appendChild(item);
+      });
+
+      dropdown.style.display = 'block';
+    }, 150);
+  });
+
+  // Pressing Enter instantly navigates to the top matching ticket
+  searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && latestResults.length > 0) {
+      e.preventDefault();
+      const top = latestResults[0];
+      const targetPage =
+        top.status === 'resolved' ? 'adminhistory.html' :
+        top.status === 'active' ? 'adminchat.html' : 'adminqueue.html';
+      window.location.href = `${targetPage}?q=${encodeURIComponent(top.ticket_code)}`;
+    }
+  });
+
+  // Close dropdown when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!searchBar.contains(e.target)) {
+      dropdown.style.display = 'none';
+    }
+  });
+});
+</script>
 </body>
 </html>
