@@ -611,10 +611,22 @@ document.addEventListener('DOMContentLoaded', async () => {
   const session = JSON.parse(localStorage.getItem('pf_session') || 'null');
   if (!session) return;
 
+  // Optional: Paste a free Groq or OpenAI-compatible API key here to power live LLM responses,
+  // or leave empty ('') to use the built-in context-aware Passion Fruit AI engine.
+  const AI_API_KEY = '';
+  const AI_ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
+  const AI_MODEL = 'llama-3.3-70b-versatile';
+
   let currentTicket = null;
   let lastMessageSignature = '';
-  let lastUserIssue = '';
-  const localHistory = []; // Stores AI conversation before human escalation
+  let aiStage = 'idle'; // 'idle' | 'awaiting_more_help' | 'awaiting_agent_confirm'
+  const context = {
+    device: null,
+    topic: null,
+    lastIssue: '',
+    turnCount: 0
+  };
+  const localHistory = [];
 
   function formatTime(iso) {
     return new Date(iso || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -624,7 +636,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!ticket) {
       if (chatNameEl) chatNameEl.textContent = 'Support Assistant';
       if (chatStatusEl) {
-        chatStatusEl.textContent = '● Online • Replies instantly';
+        chatStatusEl.textContent = '● Online • AI Support';
         chatStatusEl.style.color = '#34c759';
       }
       return;
@@ -633,16 +645,52 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (ticket.status === 'waiting') {
       if (chatNameEl) chatNameEl.textContent = 'Support Queue (' + ticket.ticket_code + ')';
       if (chatStatusEl) {
-        chatStatusEl.textContent = '● Escalated • Waiting for a specialist...';
+        chatStatusEl.textContent = '● Waiting for a chat agent to join...';
         chatStatusEl.style.color = '#f59e0b';
       }
     } else if (ticket.status === 'active') {
-      if (chatNameEl) chatNameEl.textContent = (ticket.assigned_admin || 'Passion Fruit Specialist') + ' (' + ticket.ticket_code + ')';
+      if (chatNameEl) chatNameEl.textContent = (ticket.assigned_admin || 'Passion Fruit Agent') + ' (' + ticket.ticket_code + ')';
       if (chatStatusEl) {
-        chatStatusEl.textContent = '● Live Specialist Connected';
+        chatStatusEl.textContent = '● Live Agent Connected';
         chatStatusEl.style.color = '#34c759';
       }
     }
+  }
+
+  function showTypingIndicator() {
+    removeTypingIndicator();
+    const wrapper = document.createElement('div');
+    wrapper.id = 'aiTypingBubble';
+    wrapper.style.display = 'flex';
+    wrapper.style.flexDirection = 'column';
+    wrapper.style.alignItems = 'flex-start';
+
+    const label = document.createElement('span');
+    label.textContent = 'Support Assistant';
+    label.style.fontSize = '0.72rem';
+    label.style.fontWeight = '600';
+    label.style.color = 'var(--text-secondary)';
+    label.style.margin = '0 6px 3px';
+
+    const bubble = document.createElement('div');
+    bubble.style.padding = '12px 16px';
+    bubble.style.borderRadius = '16px';
+    bubble.style.background = 'var(--bg-secondary, var(--bg))';
+    bubble.style.border = '1px solid var(--border)';
+    bubble.style.color = 'var(--text-secondary)';
+    bubble.style.fontSize = '0.88rem';
+    bubble.style.fontStyle = 'italic';
+    bubble.textContent = 'Thinking...';
+
+    wrapper.appendChild(label);
+    wrapper.appendChild(bubble);
+    messagesBox.appendChild(wrapper);
+    messagesBox.scrollTop = messagesBox.scrollHeight;
+  }
+
+  function removeTypingIndicator() {
+    const existing = document.getElementById('aiTypingBubble');
+    if (existing) existing.remove();
   }
 
   function renderBubble(senderRole, senderName, text, timestamp, options = {}) {
@@ -671,12 +719,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     bubble.style.color = isCustomer ? '#ffffff' : 'var(--text)';
     bubble.style.border = isCustomer ? 'none' : '1px solid var(--border)';
     bubble.style.fontSize = '0.92rem';
-    bubble.style.lineHeight = '1.45';
+    bubble.style.lineHeight = '1.5';
     bubble.style.whiteSpace = 'pre-wrap';
     bubble.style.overflowWrap = 'anywhere';
     bubble.textContent = text;
 
-    // Optional matching guide links from catalog.js
     if (options.articles && options.articles.length) {
       const linksWrap = document.createElement('div');
       linksWrap.style.marginTop = '10px';
@@ -697,24 +744,32 @@ document.addEventListener('DOMContentLoaded', async () => {
       bubble.appendChild(linksWrap);
     }
 
-    // Optional "Talk to a Human Specialist" escalation button
-    if (options.showEscalate && !currentTicket) {
-      const escBtn = document.createElement('button');
-      escBtn.type = 'button';
-      escBtn.textContent = 'Talk to a human specialist';
-      escBtn.style.marginTop = '10px';
-      escBtn.style.display = 'inline-block';
-      escBtn.style.padding = '7px 14px';
-      escBtn.style.borderRadius = '999px';
-      escBtn.style.border = '1px solid var(--accent, #0071e3)';
-      escBtn.style.background = 'transparent';
-      escBtn.style.color = 'var(--accent, #0071e3)';
-      escBtn.style.fontWeight = '600';
-      escBtn.style.fontSize = '0.8rem';
-      escBtn.style.cursor = 'pointer';
-      escBtn.addEventListener('click', () => escalateToAdmin(options.issueText || lastUserIssue || 'Live specialist requested'));
-      bubble.appendChild(document.createElement('br'));
-      bubble.appendChild(escBtn);
+    if (options.choices && options.choices.length && !currentTicket) {
+      const btnRow = document.createElement('div');
+      btnRow.style.marginTop = '10px';
+      btnRow.style.display = 'flex';
+      btnRow.style.gap = '8px';
+      btnRow.style.flexWrap = 'wrap';
+
+      options.choices.forEach(choice => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = choice.label;
+        btn.style.padding = '6px 14px';
+        btn.style.borderRadius = '999px';
+        btn.style.border = choice.primary ? 'none' : '1px solid var(--border)';
+        btn.style.background = choice.primary ? 'var(--accent, #0071e3)' : 'transparent';
+        btn.style.color = choice.primary ? '#ffffff' : 'var(--text)';
+        btn.style.fontWeight = '600';
+        btn.style.fontSize = '0.82rem';
+        btn.style.cursor = 'pointer';
+        btn.addEventListener('click', () => {
+          btnRow.remove();
+          handleSend(choice.value);
+        });
+        btnRow.appendChild(btn);
+      });
+      bubble.appendChild(btnRow);
     }
 
     wrapper.appendChild(bubble);
@@ -731,68 +786,305 @@ document.addEventListener('DOMContentLoaded', async () => {
     return wrapper;
   }
 
-  /* ---------- STAGE 1: AI Support Assistant (Before Human Admin) ---------- */
-  function generateAIResponse(text) {
-    const q = text.toLowerCase();
-    const wantsHuman = /\b(human|agent|specialist|admin|person|representative|live support|escalate|talk to someone)\b/.test(q);
-    const matchedArticles = typeof PF.matchArticles === 'function' ? PF.matchArticles(text, 2) : [];
+  function postAIReply(text, options = {}) {
+    removeTypingIndicator();
+    localHistory.push({ role: 'admin', name: 'Support Assistant', text });
+    messagesBox.appendChild(
+      renderBubble('admin', 'Support Assistant', text, new Date().toISOString(), options)
+    );
+    messagesBox.scrollTop = messagesBox.scrollHeight;
+  }
 
-    if (wantsHuman) {
-      return { escalateNow: true };
+  /* ---------- Context Extraction ---------- */
+  function updateContextFromText(q) {
+    if (q.includes('fruitphone') || q.includes('phone')) context.device = 'FruitPhone';
+    else if (q.includes('fruitmac') || q.includes('mac') || q.includes('laptop')) context.device = 'FruitMac';
+    else if (q.includes('fruitpad') || q.includes('pad') || q.includes('tablet')) context.device = 'FruitPad';
+    else if (q.includes('fruitwatch') || q.includes('watch')) context.device = 'FruitWatch';
+    else if (q.includes('fruitpods') || q.includes('pods') || q.includes('earbuds') || q.includes('audio')) context.device = 'FruitPods';
+  }
+
+  /* ---------- Optional Real LLM Call (If AI_API_KEY is configured) ---------- */
+  async function callRealLLM(userText) {
+    if (!AI_API_KEY) return null;
+    try {
+      const systemPrompt = `You are Passion Fruit's official AI Support Assistant. You help customers troubleshoot FruitPhone, FruitMac, FruitPad, FruitWatch, and FruitPods clearly, warmly, and concisely in numbered steps. Always ask if they need more help after giving steps. If they ask for a human agent or their issue cannot be solved remotely, ask if they want to connect to a live chat agent.`;
+      const apiMessages = [
+        { role: 'system', content: systemPrompt },
+        ...localHistory.slice(-8).map(m => ({
+          role: m.role === 'customer' ? 'user' : 'assistant',
+          content: m.text
+        }))
+      ];
+
+      const res = await fetch(AI_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + AI_API_KEY
+        },
+        body: JSON.stringify({
+          model: AI_MODEL,
+          messages: apiMessages,
+          temperature: 0.6,
+          max_tokens: 350
+        })
+      });
+
+      if (!res.ok) return null;
+      const json = await res.json();
+      return json.choices?.[0]?.message?.content?.trim() || null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /* ---------- Smart Context-Aware AI Engine ---------- */
+  async function generateSmartReply(text) {
+    const raw = text.trim();
+    const q = raw.toLowerCase();
+    updateContextFromText(q);
+    context.turnCount += 1;
+
+    const isYes = /^(yes|yeah|yep|yup|sure|ok|okay|please|y|connect|talk|i do)\b/.test(q);
+    const isNo = /^(no|nah|nope|not now|im good|i'm good|n|thanks|thank you|all good)\b/.test(q);
+    const wantsAgent = /\b(agent|support|human|specialist|admin|person|representative|live chat|operator|real person)\b/.test(q);
+    const didntWork = /\b(didn't work|didnt work|still not|still broken|not working|tried that|already tried|nothing happened|same issue|nope)\b/.test(q);
+
+    // 1. Confirming connection to a live chat agent
+    if (aiStage === 'awaiting_agent_confirm') {
+      if (isYes || wantsAgent) {
+        aiStage = 'idle';
+        await escalateToAdmin(context.lastIssue || 'Customer requested a live chat agent');
+        return;
+      }
+      if (isNo) {
+        aiStage = 'idle';
+        postAIReply('Got it! I’ll stay right here with you. What else can we check or troubleshoot together?');
+        return;
+      }
+      aiStage = 'idle';
     }
 
-    if (q.includes('battery') || q.includes('drain') || q.includes('charge')) {
-      return {
-        reply: 'Here is what you can try first for battery or charging issues:\n1. Open Settings > Battery to check which apps consume the most power.\n2. Enable Low Power Mode and update to the latest FruitOS.\n3. Inspect your USB-C / FruitPort cable and adapter for debris.\n\nStill having trouble? I can connect you to a live specialist.',
-        articles: matchedArticles,
-        showEscalate: true
-      };
+    // 2. Explicit request for agent/support
+    if (wantsAgent) {
+      aiStage = 'awaiting_agent_confirm';
+      postAIReply(
+        'I can transfer our conversation history to a live Passion Fruit specialist so you don’t have to repeat anything.\n\nWould you like to talk with a chat agent now?',
+        {
+          choices: [
+            { label: 'Yes, connect me', value: 'Yes', primary: true },
+            { label: 'No, keep chatting with AI', value: 'No', primary: false }
+          ]
+        }
+      );
+      return;
     }
 
-    if (q.includes('passcode') || q.includes('password') || q.includes('locked') || q.includes('disabled')) {
-      return {
-        reply: 'If you forgot your passcode:\n1. Connect your device to a computer with a cable.\n2. Put your device into Recovery Mode.\n3. Choose Restore to erase the device and set a new passcode.\n\nNeed step-by-step help from a technician?',
-        articles: matchedArticles,
-        showEscalate: true
-      };
+    // 3. Follow-up when user says the previous fix didn't work
+    if (didntWork && context.topic) {
+      aiStage = 'awaiting_agent_confirm';
+      const dev = context.device || 'Fruit device';
+      postAIReply(
+        `I understand — since those initial ${context.topic} steps didn't resolve it on your ${dev}, a live technician may need to run a deeper diagnostic.\n\nWould you like to talk with a chat agent?`,
+        {
+          choices: [
+            { label: 'Yes, talk to an agent', value: 'Yes', primary: true },
+            { label: 'No, try something else', value: 'No', primary: false }
+          ]
+        }
+      );
+      return;
     }
 
-    if (q.includes('face id') || q.includes('touch id') || q.includes('fingerprint')) {
-      return {
-        reply: 'To troubleshoot Face ID or Touch ID:\n1. Clean the top sensor / camera or Home button with a soft cloth.\n2. Make sure nothing is covering your face or sensor.\n3. Go to Settings > Face ID & Passcode (or Touch ID) and reset your scan.\n\nWould you like a live specialist to take a look?',
-        articles: matchedArticles,
-        showEscalate: true
-      };
+    // 4. Answering "Do you need more help with this?"
+    if (aiStage === 'awaiting_more_help') {
+      if (isYes) {
+        aiStage = 'awaiting_agent_confirm';
+        postAIReply(
+          'Would you like to talk with a live chat agent for hands-on help, or tell me what happened when you tried those steps?',
+          {
+            choices: [
+              { label: 'Yes, connect to agent', value: 'Yes', primary: true },
+              { label: 'No, stay here', value: 'No', primary: false }
+            ]
+          }
+        );
+        return;
+      }
+      if (isNo) {
+        aiStage = 'idle';
+        postAIReply('Awesome! I’m glad we got that sorted out. Let me know anytime if you need help with another Passion Fruit device.');
+        return;
+      }
+      aiStage = 'idle';
     }
 
-    if (q.includes('wi-fi') || q.includes('wifi') || q.includes('network') || q.includes('internet')) {
-      return {
-        reply: 'To fix Wi-Fi connection issues:\n1. Turn Airplane Mode on for 10 seconds, then off.\n2. Restart your router and Fruit device.\n3. Go to Settings > Wi-Fi, tap your network, and choose Forget This Network, then reconnect.\n\nIf it still won’t connect, you can escalate to a live specialist below.',
-        articles: matchedArticles,
-        showEscalate: true
-      };
+    // 5. Try real LLM if API key was provided
+    const llmReply = await callRealLLM(raw);
+    if (llmReply) {
+      aiStage = 'awaiting_more_help';
+      postAIReply(llmReply, {
+        choices: [
+          { label: 'Talk to a chat agent', value: 'agent', primary: false }
+        ]
+      });
+      return;
+    }
+
+    // 6. Greetings / open-ended "help"
+    if (/^(hi|hello|hey|yo|good morning|good afternoon|good evening|help|help me|i need help|can you help|assist|assistance)[!.?]*$/.test(q)) {
+      const firstName = (session.firstName || session.name || '').split(' ')[0];
+      const greeting = firstName ? `Hi ${firstName}! ` : 'Hi there! ';
+      postAIReply(
+        greeting + 'What do you need help with today? Tell me which device you’re using (FruitPhone, FruitMac, FruitPad, FruitWatch, or FruitPods) and what’s happening.'
+      );
+      return;
+    }
+
+    // 7. Device-only mention without an issue yet (e.g., user just types "FruitPhone" or "my laptop")
+    if (/^(my )?(fruitphone|fruitmac|fruitpad|fruitwatch|fruitpods|phone|mac|laptop|watch|earbuds)[!.?]*$/.test(q)) {
+      postAIReply(`Got it — we're looking at your ${context.device}. What issue are you experiencing with it (for example: battery, charging, Wi-Fi, screen, passcode, or audio)?`);
+      return;
+    }
+
+    // 8. Topic-aware troubleshooting with memory of the user's device
+    context.lastIssue = raw;
+    const devLabel = context.device || 'Passion Fruit device';
+    const matchedArticles = typeof PF.matchArticles === 'function' ? PF.matchArticles(raw, 2) : [];
+
+    if (q.includes('battery') || q.includes('drain') || q.includes('overheat') || q.includes('hot')) {
+      context.topic = 'battery';
+      aiStage = 'awaiting_more_help';
+      postAIReply(
+        `Let's check the battery on your ${devLabel}:\n1. Open Settings > Battery and check the usage breakdown to see if a specific app is running heavily in the background.\n2. Enable Low Power Mode and reduce screen brightness or 5G background refresh.\n3. Restart your ${devLabel} to clear stuck background processes.\n\nDo you need more help with this?`,
+        {
+          articles: matchedArticles,
+          choices: [
+            { label: 'Yes', value: 'Yes', primary: true },
+            { label: 'No', value: 'No', primary: false }
+          ]
+        }
+      );
+      return;
+    }
+
+    if (q.includes('charge') || q.includes('charging') || q.includes('turn on') || q.includes('dead') || q.includes('won\'t start')) {
+      context.topic = 'charging';
+      aiStage = 'awaiting_more_help';
+      postAIReply(
+        `If your ${devLabel} isn't charging or turning on:\n1. Inspect the charging port and cable for lint or bent pins, and try a different wall outlet.\n2. Leave it plugged in for at least 15–20 minutes before trying to power it on.\n3. Perform a force restart (hold Power + Volume Down for 10 seconds).\n\nDo you need more help with this?`,
+        {
+          articles: matchedArticles,
+          choices: [
+            { label: 'Yes', value: 'Yes', primary: true },
+            { label: 'No', value: 'No', primary: false }
+          ]
+        }
+      );
+      return;
+    }
+
+    if (q.includes('passcode') || q.includes('password') || q.includes('locked') || q.includes('disabled') || q.includes('forgot')) {
+      context.topic = 'passcode';
+      aiStage = 'awaiting_more_help';
+      postAIReply(
+        `If you're locked out of your ${devLabel}:\n1. Connect it to a computer using a USB cable.\n2. Put the device into Recovery Mode.\n3. Choose Restore on your computer to erase the device and set a new passcode (you can restore your data from your cloud backup afterward).\n\nDo you need more help with this?`,
+        {
+          articles: matchedArticles,
+          choices: [
+            { label: 'Yes', value: 'Yes', primary: true },
+            { label: 'No', value: 'No', primary: false }
+          ]
+        }
+      );
+      return;
+    }
+
+    if (q.includes('face id') || q.includes('touch id') || q.includes('fingerprint') || q.includes('unlock')) {
+      context.topic = 'biometrics';
+      aiStage = 'awaiting_more_help';
+      postAIReply(
+        `To get Face ID / Touch ID working again on your ${devLabel}:\n1. Wipe the front camera sensor or Touch ID button gently with a microfiber cloth.\n2. Ensure no screen protector or case edge is blocking the sensor.\n3. Go to Settings > Face ID & Passcode (or Touch ID) and add an Alternate Appearance / fingerprint.\n\nDo you need more help with this?`,
+        {
+          articles: matchedArticles,
+          choices: [
+            { label: 'Yes', value: 'Yes', primary: true },
+            { label: 'No', value: 'No', primary: false }
+          ]
+        }
+      );
+      return;
+    }
+
+    if (q.includes('wi-fi') || q.includes('wifi') || q.includes('network') || q.includes('internet') || q.includes('bluetooth') || q.includes('connect')) {
+      context.topic = 'connectivity';
+      aiStage = 'awaiting_more_help';
+      postAIReply(
+        `Let's troubleshoot the connection on your ${devLabel}:\n1. Toggle Airplane Mode ON for 10 seconds, then turn it OFF.\n2. Go to Settings > Wi-Fi (or Bluetooth), tap your network/device, and choose Forget This Network/Device, then pair or sign in again.\n3. Restart your router and your ${devLabel}.\n\nDo you need more help with this?`,
+        {
+          articles: matchedArticles,
+          choices: [
+            { label: 'Yes', value: 'Yes', primary: true },
+            { label: 'No', value: 'No', primary: false }
+          ]
+        }
+      );
+      return;
+    }
+
+    if (q.includes('screen') || q.includes('display') || q.includes('flicker') || q.includes('frozen') || q.includes('lag') || q.includes('slow')) {
+      context.topic = 'performance';
+      aiStage = 'awaiting_more_help';
+      postAIReply(
+        `For screen or performance issues on your ${devLabel}:\n1. Force close frozen apps and check Settings > General > Storage to ensure at least 10% free space.\n2. Force restart your ${devLabel} to clear temporary memory.\n3. Install any pending FruitOS system updates.\n\nDo you need more help with this?`,
+        {
+          articles: matchedArticles,
+          choices: [
+            { label: 'Yes', value: 'Yes', primary: true },
+            { label: 'No', value: 'No', primary: false }
+          ]
+        }
+      );
+      return;
     }
 
     if (matchedArticles.length) {
-      return {
-        reply: 'I found official troubleshooting guides that match your question. Try the steps inside, or click below if you want a live specialist:',
-        articles: matchedArticles,
-        showEscalate: true
-      };
+      context.topic = matchedArticles[0].topic?.short || 'device issue';
+      aiStage = 'awaiting_more_help';
+      postAIReply(
+        `Here is the official guide that matches your ${devLabel} question. Follow the steps inside — do you need more help with this?`,
+        {
+          articles: matchedArticles,
+          choices: [
+            { label: 'Yes', value: 'Yes', primary: true },
+            { label: 'No', value: 'No', primary: false }
+          ]
+        }
+      );
+      return;
     }
 
-    return {
-      reply: 'I can help troubleshoot FruitPhone, FruitMac, FruitPad, FruitWatch, or FruitPods issues—such as battery drain, forgotten passcodes, Face ID/Touch ID, or Wi-Fi problems.\n\nTell me a bit more about what’s happening, or click below to connect directly with a human specialist.',
-      articles: [],
-      showEscalate: true
-    };
+    // 9. Natural conversational handling for any other free-form message
+    context.topic = raw;
+    aiStage = 'awaiting_more_help';
+    postAIReply(
+      `Thanks for explaining that about your ${devLabel}. Here are the best first steps to try:\n1. Restart your ${devLabel} completely and test if the behavior continues.\n2. Check Settings > General > Software Update to make sure you're running the latest FruitOS.\n3. If it happens inside one specific app or feature, check its permissions in Settings.\n\nDo you need more help with this, or would you like me to connect you with a live chat agent?`,
+      {
+        choices: [
+          { label: 'Yes, talk to an agent', value: 'agent', primary: true },
+          { label: 'No, I’ll try this first', value: 'No', primary: false }
+        ]
+      }
+    );
   }
 
-  /* ---------- STAGE 2: Escalate to Supabase Queue & Live Admin ---------- */
+  /* ---------- Escalate to Supabase Queue Only After User Confirms "Yes" ---------- */
   async function escalateToAdmin(issueSummary) {
     if (currentTicket) return;
 
-    const summary = (issueSummary || lastUserIssue || 'Customer requested live specialist').slice(0, 140);
+    const devicePrefix = context.device ? `[${context.device}] ` : '';
+    const summary = (devicePrefix + (issueSummary || context.lastIssue || 'Customer requested chat agent')).slice(0, 140);
     const randomCode = 'KB-TICK-' + Math.floor(1000 + Math.random() * 9000);
 
     const { data: newTicket, error: ticketErr } = await window.db
@@ -809,14 +1101,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       .single();
 
     if (ticketErr) {
-      alert('Could not connect to live queue: ' + ticketErr.message);
+      postAIReply('Sorry, I couldn’t reach the live agent queue right now: ' + ticketErr.message);
       return;
     }
 
     currentTicket = newTicket;
     updateHeaderStatus(currentTicket);
 
-    // Transfer the AI chat context into Supabase chat_messages so the admin sees what the customer already tried
     const rowsToInsert = localHistory.length
       ? localHistory.map(item => ({
           ticket_id: currentTicket.id,
@@ -835,14 +1126,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       ticket_id: currentTicket.id,
       sender_role: 'admin',
       sender_name: 'Support Assistant',
-      message_text: `Ticket ${currentTicket.ticket_code} created. A live Passion Fruit specialist has been notified and will join shortly.`
+      message_text: `Ticket ${currentTicket.ticket_code} created. I've shared our conversation with a live Passion Fruit specialist — they'll join shortly!`
     });
 
     await window.db.from('chat_messages').insert(rowsToInsert);
     await syncMessages();
   }
 
-  /* ---------- Check Existing Open Ticket on Load ---------- */
+  /* ---------- Load Existing Open Ticket on Page Load ---------- */
   async function loadOpenTicket() {
     const { data, error } = await window.db
       .from('support_tickets')
@@ -860,7 +1151,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  /* ---------- Poll Supabase Once Escalated ---------- */
+  /* ---------- Sync Live Messages Once Escalated ---------- */
   async function syncMessages() {
     if (!currentTicket) return;
 
@@ -875,6 +1166,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const closedCode = freshTicket.ticket_code;
         currentTicket = null;
         lastMessageSignature = '';
+        aiStage = 'idle';
         localHistory.length = 0;
         updateHeaderStatus(null);
 
@@ -917,7 +1209,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     messagesBox.scrollTop = messagesBox.scrollHeight;
   }
 
-  /* ---------- Handle User Message ---------- */
+  /* ---------- Handle User Input ---------- */
   async function handleSend(customText) {
     const text = (typeof customText === 'string' ? customText : chatInput.value).trim();
     if (!text) return;
@@ -926,9 +1218,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     sendBtn.disabled = true;
 
     try {
-      // If NOT escalated yet -> AI Assistant handles it locally first
       if (!currentTicket) {
-        lastUserIssue = text;
         const now = new Date().toISOString();
         const customerName = session.name || session.firstName || 'Customer';
 
@@ -936,24 +1226,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         messagesBox.appendChild(renderBubble('customer', customerName, text, now));
         messagesBox.scrollTop = messagesBox.scrollHeight;
 
-        const ai = generateAIResponse(text);
-        if (ai.escalateNow) {
-          await escalateToAdmin(text);
-        } else {
-          localHistory.push({ role: 'admin', name: 'Support Assistant', text: ai.reply });
-          messagesBox.appendChild(
-            renderBubble('admin', 'Support Assistant', ai.reply, new Date().toISOString(), {
-              articles: ai.articles,
-              showEscalate: ai.showEscalate,
-              issueText: text
-            })
-          );
-          messagesBox.scrollTop = messagesBox.scrollHeight;
-        }
+        showTypingIndicator();
+        await new Promise(r => setTimeout(r, 450)); // Natural AI response pause
+        await generateSmartReply(text);
         return;
       }
 
-      // If ALREADY escalated -> send directly to Supabase live chat with Admin
       const { error: msgErr } = await window.db
         .from('chat_messages')
         .insert([{
@@ -970,6 +1248,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       await syncMessages();
     } finally {
+      removeTypingIndicator();
       sendBtn.disabled = false;
       chatInput.focus();
     }
@@ -993,5 +1272,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   setInterval(syncMessages, 1500);
 });
 </script>
+
 </body>
 </html>

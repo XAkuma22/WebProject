@@ -483,7 +483,7 @@
 <script src="js/db.js"></script>
 
 <script>
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   const themeToggleBtn = document.querySelector('[data-theme-toggle]');
   const htmlEl = document.documentElement;
   const savedTheme = localStorage.getItem('pf_theme') || 'dark';
@@ -505,40 +505,36 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnResolve = document.getElementById('btnResolve');
   const btnTransfer = document.getElementById('btnTransfer');
   const btnCancelTriage = document.getElementById('btnCancelTriage');
-
-  const ACTIVE_KEY = 'pf_active_ticket';
-  const HISTORY_KEY = 'pf_resolved_tickets';
-  const QUEUE_KEY = 'pf_support_tickets';
-
-  let activeTicket = getStorage(ACTIVE_KEY, null);  
-  let lastMessageCount = 0;
-
-  const tickets = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]');
   const sidebarQueueBadge = document.getElementById('sidebarQueueBadge');
   const sidebarActiveBadge = document.getElementById('sidebarActiveBadge');
-  if (sidebarQueueBadge) sidebarQueueBadge.textContent = tickets.length;
-  if (sidebarActiveBadge) sidebarActiveBadge.textContent = activeTicket ? 1 : 0;
 
-  function getStorage(key, fallback) {
-    try {
-      const data = localStorage.getItem(key);
-      return data ? JSON.parse(data) : fallback;
-    } catch (error) {
-      return fallback;
-    }
+  const session = JSON.parse(localStorage.getItem('pf_session') || '{}');
+  let activeTicket = null;
+  let lastMessageSignature = '';
+
+  function formatTime(iso) {
+    return new Date(iso || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
 
-  function saveTicket() {
-    localStorage.setItem(ACTIVE_KEY, JSON.stringify(activeTicket));
+  async function refreshBadgesAndTicket() {
+    const { data: allTickets, error } = await window.db
+      .from('support_tickets')
+      .select('*')
+      .in('status', ['waiting', 'active'])
+      .order('created_at', { ascending: true });
+
+    if (error || !allTickets) return null;
+
+    const waiting = allTickets.filter(t => t.status === 'waiting');
+    const active = allTickets.filter(t => t.status === 'active');
+
+    if (sidebarQueueBadge) sidebarQueueBadge.textContent = waiting.length;
+    if (sidebarActiveBadge) sidebarActiveBadge.textContent = active.length;
+
+    return active[0] || null;
   }
 
-  function createMessageId() {
-    return Date.now() + '-' + Math.random().toString(36).slice(2);
-  }
-
-  function formatTime(timestamp) {
-    return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  }
+  activeTicket = await refreshBadgesAndTicket();
 
   if (!activeTicket) {
     chatBox.innerHTML = `
@@ -551,16 +547,6 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
     `;
   } else {
-    if (!Array.isArray(activeTicket.messages)) {
-      activeTicket.messages = [{
-        id: createMessageId(),
-        sender: 'customer',
-        text: activeTicket.subject || 'Hello support! I need assistance with my device.',
-        timestamp: Date.now()
-      }];
-      saveTicket();
-    }
-
     if (headerActions) headerActions.hidden = false;
 
     chatBox.innerHTML = `
@@ -575,29 +561,42 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
     `;
 
-    document.getElementById('customerName').textContent = activeTicket.user || activeTicket.customer || 'Customer';
-    document.getElementById('ticketId').textContent = activeTicket.id || 'TK-1042';
+    document.getElementById('customerName').textContent = activeTicket.customer_name || 'Customer';
+    document.getElementById('ticketId').textContent = activeTicket.ticket_code || activeTicket.id;
 
     const messagesContainer = document.getElementById('chatMessages');
     const chatInput = document.getElementById('chatInput');
     const sendMsgBtn = document.getElementById('sendMsgBtn');
 
-    function renderMessages() {
-      const latestTicket = getStorage(ACTIVE_KEY, null);
-      if (!latestTicket) return;
-      activeTicket = latestTicket;
+    async function renderMessages() {
+      if (!activeTicket) return;
+      await refreshBadgesAndTicket();
 
-      const messages = Array.isArray(activeTicket.messages) ? activeTicket.messages : [];
-      const messageSignature = messages.map(m => m.id).join('|');
-      if (messageSignature === lastMessageCount) return;
+      const { data: msgs, error } = await window.db
+        .from('chat_messages')
+        .select('*')
+        .eq('ticket_id', activeTicket.id)
+        .order('sent_at', { ascending: true });
+
+      if (error || !msgs) return;
+
+      const signature = msgs.map(m => m.id).join('|');
+      if (signature === lastMessageSignature) return;
 
       messagesContainer.innerHTML = '';
-      messages.forEach(message => {
-        const isAdmin = message.sender === 'admin';
+      msgs.forEach(message => {
+        const isAdmin = message.sender_role === 'admin';
         const messageWrapper = document.createElement('div');
         messageWrapper.style.display = 'flex';
         messageWrapper.style.flexDirection = 'column';
         messageWrapper.style.alignItems = isAdmin ? 'flex-end' : 'flex-start';
+
+        const senderLabel = document.createElement('span');
+        senderLabel.textContent = message.sender_name || (isAdmin ? 'Admin' : 'Customer');
+        senderLabel.style.fontSize = '0.7rem';
+        senderLabel.style.fontWeight = '600';
+        senderLabel.style.color = 'var(--text-muted)';
+        senderLabel.style.margin = '0 5px 3px';
 
         const bubble = document.createElement('div');
         bubble.style.maxWidth = '80%';
@@ -609,37 +608,50 @@ document.addEventListener('DOMContentLoaded', () => {
         bubble.style.overflowWrap = 'anywhere';
         bubble.style.whiteSpace = 'pre-wrap';
         bubble.style.fontSize = '0.9rem';
-        bubble.textContent = message.text;
+        bubble.textContent = message.message_text;
 
         const timestamp = document.createElement('span');
-        timestamp.textContent = formatTime(message.timestamp || Date.now());
+        timestamp.textContent = formatTime(message.sent_at);
         timestamp.style.fontSize = '0.7rem';
         timestamp.style.color = 'var(--text-muted)';
         timestamp.style.margin = '4px 5px';
 
+        messageWrapper.appendChild(senderLabel);
         messageWrapper.appendChild(bubble);
         messageWrapper.appendChild(timestamp);
         messagesContainer.appendChild(messageWrapper);
       });
 
-      lastMessageCount = messageSignature;
+      lastMessageSignature = signature;
       messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
 
-    function sendMessage() {
+    async function sendMessage() {
       const text = chatInput.value.trim();
       if (!text || !activeTicket) return;
-      activeTicket.messages.push({
-        id: createMessageId(),
-        sender: 'admin',
-        text: text,
-        timestamp: Date.now()
-      });
-      saveTicket();
+
       chatInput.value = '';
-      chatInput.focus();
-      lastMessageCount = 0;
-      renderMessages();
+      sendMsgBtn.disabled = true;
+
+      try {
+        const { error } = await window.db
+          .from('chat_messages')
+          .insert([{
+            ticket_id: activeTicket.id,
+            sender_role: 'admin',
+            sender_name: session.name || 'System Admin',
+            message_text: text
+          }]);
+
+        if (error) {
+          alert('Could not send message: ' + error.message);
+          return;
+        }
+        await renderMessages();
+      } finally {
+        sendMsgBtn.disabled = false;
+        chatInput.focus();
+      }
     }
 
     sendMsgBtn.addEventListener('click', sendMessage);
@@ -650,8 +662,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    renderMessages();
-    setInterval(renderMessages, 1000);
+    await renderMessages();
+    setInterval(renderMessages, 1500);
 
     if (endConvoBtn && triageModal) {
       endConvoBtn.addEventListener('click', () => { triageModal.hidden = false; });
@@ -662,26 +674,33 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   if (btnResolve) {
-    btnResolve.addEventListener('click', () => {
+    btnResolve.addEventListener('click', async () => {
       if (!activeTicket) return;
-      activeTicket.status = 'Resolved';
-      activeTicket.resolvedAt = new Date().toLocaleString();
-      const history = getStorage(HISTORY_KEY, []);
-      history.push({ ...activeTicket });
-      localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
-      localStorage.removeItem(ACTIVE_KEY);
+      const { error } = await window.db
+        .from('support_tickets')
+        .update({ status: 'resolved', resolved_at: new Date().toISOString() })
+        .eq('id', activeTicket.id);
+
+      if (error) {
+        alert('Could not resolve ticket: ' + error.message);
+        return;
+      }
       window.location.href = 'adminhistory.html';
     });
   }
 
   if (btnTransfer) {
-    btnTransfer.addEventListener('click', () => {
+    btnTransfer.addEventListener('click', async () => {
       if (!activeTicket) return;
-      activeTicket.status = 'Escalated / Transferred';
-      const queue = getStorage(QUEUE_KEY, []);
-      queue.push(activeTicket);
-      localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
-      localStorage.removeItem(ACTIVE_KEY);
+      const { error } = await window.db
+        .from('support_tickets')
+        .update({ status: 'waiting', assigned_admin: null })
+        .eq('id', activeTicket.id);
+
+      if (error) {
+        alert('Could not return ticket to queue: ' + error.message);
+        return;
+      }
       window.location.href = 'adminqueue.html';
     });
   }
