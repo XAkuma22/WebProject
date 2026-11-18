@@ -2090,7 +2090,11 @@ main {
 
 .field-error {
   margin-top: 6px;
-  font-size: 0.75rem;
+  font-family: var(--font);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: -0.011em;
   color: var(--danger);
   animation: fade-in 0.4s var(--ease-fluid);
 }
@@ -2208,23 +2212,25 @@ main {
   transition: background-color 0.5s var(--ease-fluid);
 }
 
-.strength[data-level="1"] span:nth-child(-n+1) {
-  background: var(--danger);
-}
-.strength[data-level="2"] span:nth-child(-n+2) {
-  background: #ff9f0a;
-}
-.strength[data-level="3"] span:nth-child(-n+3) {
-  background: #34c759;
-}
-.strength[data-level="4"] span:nth-child(-n+4) {
-  background: var(--success);
-}
-
 .strength__label {
   margin-top: 6px;
-  font-size: 0.75rem;
+  font-family: var(--font);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: -0.011em;
   color: var(--text-secondary);
+  transition: color 0.4s var(--ease-fluid);
+}
+
+.strength[data-level="1"] .strength__label {
+  color: var(--danger);
+}
+.strength[data-level="2"] .strength__label {
+  color: #ff9f0a;
+}
+.strength[data-level="3"] .strength__label,
+.strength[data-level="4"] .strength__label {
+  color: var(--success);
 }
 
 .form-status {

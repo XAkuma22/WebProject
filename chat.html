@@ -615,7 +615,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   let lastUserIssue = '';
   let awaitingAgentConfirm = false;
   const localHistory = [];
+// Theme Toggle Handler
+  const themeToggleBtn = document.querySelector('[data-theme-toggle]') || document.getElementById('themeToggleBtn');
+  const htmlEl = document.documentElement;
+  const savedTheme = localStorage.getItem('pf_theme') || 'dark';
+  htmlEl.setAttribute('data-theme', savedTheme);
 
+  if (themeToggleBtn) {
+    themeToggleBtn.addEventListener('click', () => {
+      const current = htmlEl.getAttribute('data-theme');
+      const next = current === 'dark' ? 'light' : 'dark';
+      htmlEl.setAttribute('data-theme', next);
+      localStorage.setItem('pf_theme', next);
+    });
+  }
   function formatTime(iso) {
     return new Date(iso || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }

@@ -91,94 +91,7 @@
       });
     }
 
-    /* ---------- SIGN IN (Queries Supabase 'users' table) -------------------- */
-    if (signin) {
-      const email = $('#email');
-      const password = $('#password');
-      const remember = $('#remember');
-      const submit = $('[data-submit]', signin);
-
-      const remembered = store.get(KEYS.remember, '');
-      if (remembered) {
-        email.value = remembered;
-        if (remember) remember.checked = true;
-      }
-      [email, password].forEach((i) => i.addEventListener('input', () => setFieldError(i, false)));
-
-      signin.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        setStatus(status, '');
-        const emailValue = email.value.trim().toLowerCase();
-        const passwordValue = password.value;
-        const okEmail = isEmail(emailValue);
-        const okPassword = passwordValue.length >= 6;
-
-        setFieldError(email, !okEmail);
-        setFieldError(password, !okPassword);
-        if (!okEmail || !okPassword) {
-          (okEmail ? password : email).focus();
-          return;
-        }
-
-        let success = false;
-        setLoading(submit, true, 'Signing in…');
-
-        try {
-          const client = getDb();
-          const { data: account, error } = await client
-            .from('users')
-            .select('*')
-            .ilike('email', emailValue)
-            .maybeSingle();
-
-          if (error) {
-            setStatus(status, 'Database error: ' + error.message, 'error');
-            return;
-          }
-
-          if (!account) {
-            setStatus(status, 'No account found with that email. Please sign up first.', 'error');
-            return;
-          }
-
-          if (account.password !== passwordValue) {
-            setStatus(status, 'Incorrect password. Please try again.', 'error');
-            return;
-          }
-
-          const fullName = [account.first_name, account.middle_name, account.last_name]
-            .filter(Boolean)
-            .join(' ');
-
-          store.set(KEYS.session, {
-            id: account.id,
-            name: fullName,
-            firstName: account.first_name,
-            email: account.email,
-            role: account.role === 'admin' ? 'admin' : 'user'
-          });
-
-          if (remember && remember.checked) store.set(KEYS.remember, emailValue);
-          else store.remove(KEYS.remember);
-
-          if (account.role === 'admin') {
-            setStatus(status, 'Admin signed in successfully. Redirecting…', 'success');
-            success = true;
-            setTimeout(() => { window.location.href = 'adminpage.html'; }, 800);
-          } else {
-            setStatus(status, 'Signed in successfully. Redirecting…', 'success');
-            success = true;
-            setTimeout(() => { window.location.href = next || 'HomePageMain.html'; }, 800);
-          }
-        } catch (err) {
-          setStatus(status, err.message || 'Unable to connect to database.', 'error');
-        } finally {
-          if (!success) setLoading(submit, false);
-        }
-      });
-    }
-
-    /* ---------- SIGN UP (Inserts into Supabase 'users' table) --------------- */
+/* ---------- SIGN UP (Inserts into Supabase 'users' table) --------------- */
     if (signup) {
       const first = $('#firstName');
       const middle = $('#middleName');
@@ -190,17 +103,29 @@
       const submit = $('[data-submit]', signup);
       const meter = $('#passwordStrength');
       const meterLabel = meter ? $('.strength__label', meter) : null;
-      const LABELS = ['Use at least 6 characters', 'Weak', 'Fair', 'Good', 'Strong'];
+      const passwordError = $('#passwordError');
+      const LABELS = ['Use at least 8 characters', 'Weak', 'Fair', 'Good', 'Strong'];
 
-      [first, middle, last, email, password, confirm].forEach((i) => {
+      const isStrongEnough = (pw) => pw.length >= 8 && scorePassword(pw) >= 2;
+
+      [first, middle, last, email, confirm].forEach((i) => {
         if (i) i.addEventListener('input', () => setFieldError(i, false));
       });
       if (terms) terms.addEventListener('change', () => setFieldError(terms, false));
+
       if (password && meter && meterLabel) {
         password.addEventListener('input', () => {
-          const level = scorePassword(password.value);
+          const val = password.value;
+          const level = val ? scorePassword(val) : 0;
           meter.dataset.level = String(level);
           meterLabel.textContent = LABELS[level];
+
+          if (val.length > 0 && !isStrongEnough(val)) {
+            if (passwordError) passwordError.textContent = 'Choose a better or stronger password';
+            setFieldError(password, true);
+          } else {
+            setFieldError(password, false);
+          }
         });
       }
 
@@ -211,14 +136,19 @@
         const m = middle ? middle.value.trim() : '';
         const l = last.value.trim();
         const emailValue = email.value.trim().toLowerCase();
+        const pwOk = isStrongEnough(password.value);
+
+        if (!pwOk && passwordError) {
+          passwordError.textContent = 'Choose a better or stronger password';
+        }
 
         const checks = [
           [first, f.length > 1 && isName(f)],
           [middle, m === '' || isName(m)],
           [last, l.length > 1 && isName(l)],
           [email, isEmail(emailValue)],
-          [password, password.value.length >= 6],
-          [confirm, confirm.value === password.value && password.value.length >= 6],
+          [password, pwOk],
+          [confirm, confirm.value === password.value && pwOk],
           [terms, terms.checked]
         ];
         checks.forEach(([input, ok]) => setFieldError(input, !ok));
