@@ -431,9 +431,11 @@
       </div>
     </footer>
   </div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/db.js"></script>
 
 <script>
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   const themeToggleBtn = document.querySelector('[data-theme-toggle]');
   const htmlEl = document.documentElement;
   const savedTheme = localStorage.getItem('pf_theme') || 'dark';
@@ -448,15 +450,25 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  const tickets = JSON.parse(localStorage.getItem('pf_resolved_tickets') || '[]');
-  const pendingTickets = JSON.parse(localStorage.getItem('pf_support_tickets') || '[]');
-  const activeTicket = JSON.parse(localStorage.getItem('pf_active_ticket') || 'null');
-  const sidebarQueueBadge = document.getElementById('sidebarQueueBadge');
-  const sidebarActiveBadge = document.getElementById('sidebarActiveBadge');
-  if (sidebarQueueBadge) sidebarQueueBadge.textContent = pendingTickets.length;
-  if (sidebarActiveBadge) sidebarActiveBadge.textContent = activeTicket ? 1 : 0;
-
   const tbody = document.getElementById('queueTableBody');
+  const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  const { data: allTickets, error } = await window.db
+    .from('support_tickets')
+    .select('*')
+    .order('resolved_at', { ascending: false });
+
+  if (error) {
+    console.error('Supabase archives error:', error.message);
+    return;
+  }
+
+  const tickets = allTickets.filter(t => t.status === 'resolved');
+  const pendingTickets = allTickets.filter(t => t.status === 'waiting');
+  const activeTickets = allTickets.filter(t => t.status === 'active');
+
+  document.getElementById('sidebarQueueBadge').textContent = pendingTickets.length;
+  document.getElementById('sidebarActiveBadge').textContent = activeTickets.length;
 
   function renderQueue(items) {
     if (!tbody) return;
@@ -471,32 +483,17 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    tbody.innerHTML = items.map((t, index) => `
+    tbody.innerHTML = items.map(t => `
       <tr>
-        <td style="font-weight:600; color:var(--accent-blue);">
-          ${t.id || ('TK-' + index)}
-        </td>
+        <td style="font-weight:600; color:var(--accent-blue);">${esc(t.ticket_code)}</td>
+        <td>${esc(t.customer_name)}</td>
+        <td>${esc(t.issue_summary)}</td>
         <td>
-          ${t.user || t.customer || 'Customer'}
-        </td>
-        <td>
-          ${t.query || 'General Support Request'}
-        </td>
-        <td>
-          <span style="
-            padding:6px 12px;
-            border-radius:999px;
-            font-size:0.8rem;
-            font-weight:600;
-            background:${t.status === 'Resolved' ? 'rgba(52,199,89,.15)' : 'rgba(59,130,246,.15)'};
-            color:${t.status === 'Resolved' ? '#34c759' : 'var(--accent-blue)'};
-          ">
-            ${t.status || 'Resolved'}
+          <span style="padding:6px 12px; border-radius:999px; font-size:0.8rem; font-weight:600; background:rgba(52,199,89,.15); color:#34c759;">
+            Resolved
           </span>
         </td>
-        <td>
-          ${t.resolvedAt || t.transferredAt || '-'}
-        </td>
+        <td>${t.resolved_at ? new Date(t.resolved_at).toLocaleString() : '-'}</td>
       </tr>
     `).join('');
   }
@@ -508,10 +505,9 @@ document.addEventListener('DOMContentLoaded', () => {
     searchInput.addEventListener('input', e => {
       const query = e.target.value.toLowerCase();
       const filtered = tickets.filter(t =>
-        (t.user && t.user.toLowerCase().includes(query)) ||
-        (t.customer && t.customer.toLowerCase().includes(query)) ||
-        (t.id && t.id.toLowerCase().includes(query)) ||
-        (t.status && t.status.toLowerCase().includes(query))
+        t.customer_name.toLowerCase().includes(query) ||
+        t.issue_summary.toLowerCase().includes(query) ||
+        t.ticket_code.toLowerCase().includes(query)
       );
       renderQueue(filtered);
     });

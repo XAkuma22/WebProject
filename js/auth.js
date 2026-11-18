@@ -1,6 +1,6 @@
 /* =============================================================================
    auth.js
-   Sign in, Sign up and Forgot password (all account logic lives here).
+   Sign in, Sign up and Forgot password connected to Supabase PostgreSQL ('users').
    ============================================================================= */
 (() => {
   'use strict';
@@ -8,52 +8,43 @@
   if (!PF || PF.redirecting) return;
   const { KEYS, store, safeNext, $, $$, h } = PF;
 
-  /* ---------- Auth ---------------------------------------------------------- */
-  const getAccounts = () => store.get(KEYS.accounts, []);
-  const findAccount = (email) => getAccounts().find((a) => a.email.toLowerCase() === email.toLowerCase());
+  /* ---------- Helpers ------------------------------------------------------- */
   const isEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
   const isName = (v) => /^[\p{L}][\p{L}\s'’.-]*$/u.test(v);
 
-  function randomSalt() {
-    if (window.crypto && window.crypto.getRandomValues) {
-      return Array.from(window.crypto.getRandomValues(new Uint8Array(16))).map((b) => b.toString(16).padStart(2, '0')).join('');
+  function getDb() {
+    if (!window.db) {
+      throw new Error('Database client (js/db.js) is not loaded on this page.');
     }
-    return String(Math.random()).slice(2) + Date.now();
-  }
-
-  async function hashPassword(password, salt) {
-    const data = new TextEncoder().encode(salt + ':' + password);
-    if (window.crypto && window.crypto.subtle) {
-      const digest = await window.crypto.subtle.digest('SHA-256', data);
-      return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, '0')).join('');
-    }
-    let hash = 5381;
-    data.forEach((b) => { hash = ((hash << 5) + hash + b) | 0; });
-    return 'weak-' + (hash >>> 0).toString(16);
-  }
-
-  async function verifyPassword(account, password) {
-    if (account.hash) return (await hashPassword(password, account.salt)) === account.hash;
-    return account.password === password;
+    return window.db;
   }
 
   function setStatus(el, message, type) {
+    if (!el) return;
     el.textContent = message;
     el.hidden = !message;
     el.className = 'form-status' + (type ? ' is-' + type : '');
   }
+
   function setFieldError(input, show) {
+    if (!input) return;
     input.setAttribute('aria-invalid', String(show));
     const err = document.getElementById(input.id + 'Error');
     if (err) err.hidden = !show;
   }
+
   function setLoading(btn, on, text) {
+    if (!btn) return;
     btn.disabled = on;
     btn.classList.toggle('is-loading', on);
     const label = $('.btn__label', btn);
     if (!label) return;
-    if (on) { label.dataset.orig = label.textContent; label.textContent = text; }
-    else if (label.dataset.orig) label.textContent = label.dataset.orig;
+    if (on) {
+      label.dataset.orig = label.textContent;
+      label.textContent = text;
+    } else if (label.dataset.orig) {
+      label.textContent = label.dataset.orig;
+    }
   }
 
   function initPasswordToggles() {
@@ -79,6 +70,7 @@
     return Math.max(score, 1);
   }
 
+  /* ---------- Auth Initialization ------------------------------------------- */
   function initAuth() {
     initPasswordToggles();
     const params = new URLSearchParams(window.location.search);
@@ -91,16 +83,26 @@
       setStatus(status, 'Please sign in or create an account to continue.', 'info');
     }
 
-     const forgot = $('[data-forgot]');
-    if (forgot) forgot.addEventListener('click', (e) => {
-      e.preventDefault();
-      openResetDialog();
-    });
+    const forgot = $('[data-forgot]');
+    if (forgot) {
+      forgot.addEventListener('click', (e) => {
+        e.preventDefault();
+        openResetDialog();
+      });
+    }
 
+    /* ---------- SIGN IN (Queries Supabase 'users' table) -------------------- */
     if (signin) {
-      const email = $('#email'), password = $('#password'), remember = $('#remember'), submit = $('[data-submit]', signin);
+      const email = $('#email');
+      const password = $('#password');
+      const remember = $('#remember');
+      const submit = $('[data-submit]', signin);
+
       const remembered = store.get(KEYS.remember, '');
-      if (remembered) { email.value = remembered; remember.checked = true; }
+      if (remembered) {
+        email.value = remembered;
+        if (remember) remember.checked = true;
+      }
       [email, password].forEach((i) => i.addEventListener('input', () => setFieldError(i, false)));
 
       signin.addEventListener('submit', async (e) => {
@@ -110,72 +112,106 @@
         const passwordValue = password.value;
         const okEmail = isEmail(emailValue);
         const okPassword = passwordValue.length >= 6;
-        
+
         setFieldError(email, !okEmail);
         setFieldError(password, !okPassword);
-        if (!okEmail || !okPassword) { (okEmail ? password : email).focus(); return; }
+        if (!okEmail || !okPassword) {
+          (okEmail ? password : email).focus();
+          return;
+        }
 
         let success = false;
         setLoading(submit, true, 'Signing in…');
+
         try {
-          // --- HARDCODED ADMIN CHECK ---
-          if (emailValue === 'admin@passionfruit.com' && passwordValue === 'admin123') {
-            store.set(KEYS.session, {
-              name: 'System Admin',
-              firstName: 'Admin',
-              email: emailValue,
-              role: 'admin'
-            });
-            if (remember.checked) store.set(KEYS.remember, emailValue); else store.remove(KEYS.remember);
-            setStatus(status, 'Admin signed in successfully. Redirecting…', 'success');
-            success = true;
-            setTimeout(() => { window.location.href = 'adminpage.html'; }, 800);
+          const client = getDb();
+          const { data: account, error } = await client
+            .from('users')
+            .select('*')
+            .ilike('email', emailValue)
+            .maybeSingle();
+
+          if (error) {
+            setStatus(status, 'Database error: ' + error.message, 'error');
             return;
           }
 
-          // --- NORMAL USER LOGIN CHECK ---
-          const account = findAccount(emailValue);
-          if (!account) { setStatus(status, 'No account found with that email. Please sign up first.', 'error'); return; }
-          if (!(await verifyPassword(account, passwordValue))) { setStatus(status, 'Incorrect password. Please try again.', 'error'); return; }
-          
-          const name = account.name || [account.firstName, account.middleName, account.lastName].filter(Boolean).join(' ');
-          store.set(KEYS.session, { 
-            name, 
-            firstName: account.firstName || name.split(' ')[0], 
+          if (!account) {
+            setStatus(status, 'No account found with that email. Please sign up first.', 'error');
+            return;
+          }
+
+          if (account.password !== passwordValue) {
+            setStatus(status, 'Incorrect password. Please try again.', 'error');
+            return;
+          }
+
+          const fullName = [account.first_name, account.middle_name, account.last_name]
+            .filter(Boolean)
+            .join(' ');
+
+          store.set(KEYS.session, {
+            id: account.id,
+            name: fullName,
+            firstName: account.first_name,
             email: account.email,
-            role: 'user'
+            role: account.role === 'admin' ? 'admin' : 'user'
           });
-          
-          if (remember.checked) store.set(KEYS.remember, emailValue); else store.remove(KEYS.remember);
-          setStatus(status, 'Signed in successfully. Redirecting…', 'success');
-          success = true;
-          setTimeout(() => { window.location.href = next || 'HomePageMain.html'; }, 800);
+
+          if (remember && remember.checked) store.set(KEYS.remember, emailValue);
+          else store.remove(KEYS.remember);
+
+          if (account.role === 'admin') {
+            setStatus(status, 'Admin signed in successfully. Redirecting…', 'success');
+            success = true;
+            setTimeout(() => { window.location.href = 'adminpage.html'; }, 800);
+          } else {
+            setStatus(status, 'Signed in successfully. Redirecting…', 'success');
+            success = true;
+            setTimeout(() => { window.location.href = next || 'HomePageMain.html'; }, 800);
+          }
+        } catch (err) {
+          setStatus(status, err.message || 'Unable to connect to database.', 'error');
         } finally {
           if (!success) setLoading(submit, false);
         }
       });
     }
 
+    /* ---------- SIGN UP (Inserts into Supabase 'users' table) --------------- */
     if (signup) {
-      const first = $('#firstName'), middle = $('#middleName'), last = $('#lastName');
-      const email = $('#email'), password = $('#password'), confirm = $('#confirmPassword'), terms = $('#terms');
+      const first = $('#firstName');
+      const middle = $('#middleName');
+      const last = $('#lastName');
+      const email = $('#email');
+      const password = $('#password');
+      const confirm = $('#confirmPassword');
+      const terms = $('#terms');
       const submit = $('[data-submit]', signup);
       const meter = $('#passwordStrength');
-      const meterLabel = $('.strength__label', meter);
+      const meterLabel = meter ? $('.strength__label', meter) : null;
       const LABELS = ['Use at least 6 characters', 'Weak', 'Fair', 'Good', 'Strong'];
 
-      [first, middle, last, email, password, confirm].forEach((i) => i.addEventListener('input', () => setFieldError(i, false)));
-      terms.addEventListener('change', () => setFieldError(terms, false));
-      password.addEventListener('input', () => {
-        const level = scorePassword(password.value);
-        meter.dataset.level = String(level);
-        meterLabel.textContent = LABELS[level];
+      [first, middle, last, email, password, confirm].forEach((i) => {
+        if (i) i.addEventListener('input', () => setFieldError(i, false));
       });
+      if (terms) terms.addEventListener('change', () => setFieldError(terms, false));
+      if (password && meter && meterLabel) {
+        password.addEventListener('input', () => {
+          const level = scorePassword(password.value);
+          meter.dataset.level = String(level);
+          meterLabel.textContent = LABELS[level];
+        });
+      }
 
       signup.addEventListener('submit', async (e) => {
         e.preventDefault();
         setStatus(status, '');
-        const f = first.value.trim(), m = middle.value.trim(), l = last.value.trim(), emailValue = email.value.trim();
+        const f = first.value.trim();
+        const m = middle ? middle.value.trim() : '';
+        const l = last.value.trim();
+        const emailValue = email.value.trim().toLowerCase();
+
         const checks = [
           [first, f.length > 1 && isName(f)],
           [middle, m === '' || isName(m)],
@@ -187,19 +223,57 @@
         ];
         checks.forEach(([input, ok]) => setFieldError(input, !ok));
         const firstBad = checks.find(([, ok]) => !ok);
-        if (firstBad) { firstBad[0].focus(); return; }
+        if (firstBad) {
+          firstBad[0].focus();
+          return;
+        }
 
         let success = false;
         setLoading(submit, true, 'Creating account…');
+
         try {
-          if (findAccount(emailValue)) { setStatus(status, 'An account with this email already exists.', 'error'); return; }
-          const salt = randomSalt();
-          const accounts = getAccounts();
-          accounts.push({ firstName: f, middleName: m, lastName: l, name: [f, m, l].filter(Boolean).join(' '), email: emailValue, salt, hash: await hashPassword(password.value, salt) });
-          if (!store.set(KEYS.accounts, accounts)) { setStatus(status, 'Could not save your account. Please enable browser storage.', 'error'); return; }
+          const client = getDb();
+
+          // 1. Check if email already exists in Supabase
+          const { data: existing, error: checkErr } = await client
+            .from('users')
+            .select('id')
+            .ilike('email', emailValue)
+            .maybeSingle();
+
+          if (checkErr) {
+            setStatus(status, 'Database error: ' + checkErr.message, 'error');
+            return;
+          }
+          if (existing) {
+            setStatus(status, 'An account with this email already exists.', 'error');
+            return;
+          }
+
+          // 2. Insert new customer into Supabase 'users' table
+          const { error: insertErr } = await client
+            .from('users')
+            .insert([{
+              first_name: f,
+              middle_name: m || null,
+              last_name: l,
+              email: emailValue,
+              password: password.value,
+              role: 'customer'
+            }]);
+
+          if (insertErr) {
+            setStatus(status, 'Could not create account: ' + insertErr.message, 'error');
+            return;
+          }
+
           setStatus(status, 'Account created successfully. Redirecting…', 'success');
           success = true;
-          setTimeout(() => { window.location.href = 'Signin.html' + (next ? '?next=' + encodeURIComponent(next) : ''); }, 900);
+          setTimeout(() => {
+            window.location.href = 'Signin.html' + (next ? '?next=' + encodeURIComponent(next) : '');
+          }, 900);
+        } catch (err) {
+          setStatus(status, err.message || 'Unable to connect to database.', 'error');
         } finally {
           if (!success) setLoading(submit, false);
         }
@@ -207,12 +281,14 @@
     }
   }
 
-  /* ---------- Forgot password: self-service reset ---------------------------- */
+  /* ---------- Forgot Password (Updates password in Supabase 'users') -------- */
   function openResetDialog() {
     const opener = document.activeElement;
     const field = (id, label, type, placeholder, autocomplete) =>
-      h('div', { class: 'field' }, h('label', { for: id }, label),
-        h('input', { id, type, placeholder, autocomplete: autocomplete || 'off' }));
+      h('div', { class: 'field' },
+        h('label', { for: id }, label),
+        h('input', { id, type, placeholder, autocomplete: autocomplete || 'off' })
+      );
 
     const fEmail = field('rsEmail', 'Email address', 'email', 'you@example.com', 'email');
     const fFirst = field('rsFirst', 'First name', 'text', 'As entered at sign-up');
@@ -235,33 +311,63 @@
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      if (tries >= 5) { setStatus(status, 'Too many attempts. Please try again later.', 'error'); return; }
-      const email = val(fEmail), pass = fPass.querySelector('input').value;
-      if (!isEmail(email)) { setStatus(status, 'Please enter a valid email address.', 'error'); return; }
-      if (pass.length < 6) { setStatus(status, 'New password must be at least 6 characters.', 'error'); return; }
-
-      const accounts = getAccounts();
-      const acct = accounts.find((a) => same(a.email, email));
-      if (!acct || !same(acct.firstName, val(fFirst)) || !same(acct.lastName, val(fLast))) {
-        tries += 1;
-        setStatus(status, 'We couldn’t verify those details. Please check them and try again.', 'error');
+      if (tries >= 5) {
+        setStatus(status, 'Too many attempts. Please try again later.', 'error');
+        return;
+      }
+      const email = val(fEmail).toLowerCase();
+      const pass = fPass.querySelector('input').value;
+      if (!isEmail(email)) {
+        setStatus(status, 'Please enter a valid email address.', 'error');
+        return;
+      }
+      if (pass.length < 6) {
+        setStatus(status, 'New password must be at least 6 characters.', 'error');
         return;
       }
 
-      acct.salt = randomSalt();
-      acct.hash = await hashPassword(pass, acct.salt);
-      delete acct.password;
-      if (!store.set(KEYS.accounts, accounts)) { setStatus(status, 'Could not save your new password. Please enable browser storage.', 'error'); return; }
+      setLoading(submit, true, 'Verifying…');
+      try {
+        const client = getDb();
+        const { data: acct, error } = await client
+          .from('users')
+          .select('id, first_name, last_name')
+          .ilike('email', email)
+          .maybeSingle();
 
-      setLoading(submit, true, 'Saving…');
-      setStatus(status, 'Password updated. You can sign in now.', 'success');
-      setTimeout(() => {
-        dialog.close();
-        const signinEmail = document.getElementById('email');
-        const signinPass = document.getElementById('password');
-        if (signinEmail) signinEmail.value = email;
-        if (signinPass) { signinPass.value = ''; signinPass.focus(); }
-      }, 1400);
+        if (error || !acct || !same(acct.first_name, val(fFirst)) || !same(acct.last_name, val(fLast))) {
+          tries += 1;
+          setLoading(submit, false);
+          setStatus(status, 'We couldn’t verify those details. Please check them and try again.', 'error');
+          return;
+        }
+
+        const { error: updateErr } = await client
+          .from('users')
+          .update({ password: pass })
+          .eq('id', acct.id);
+
+        if (updateErr) {
+          setLoading(submit, false);
+          setStatus(status, 'Could not update password: ' + updateErr.message, 'error');
+          return;
+        }
+
+        setStatus(status, 'Password updated. You can sign in now.', 'success');
+        setTimeout(() => {
+          dialog.close();
+          const signinEmail = document.getElementById('email');
+          const signinPass = document.getElementById('password');
+          if (signinEmail) signinEmail.value = email;
+          if (signinPass) {
+            signinPass.value = '';
+            signinPass.focus();
+          }
+        }, 1400);
+      } catch (err) {
+        setLoading(submit, false);
+        setStatus(status, err.message || 'Unable to connect to database.', 'error');
+      }
     });
 
     dialog.addEventListener('click', (e) => { if (e.target === dialog) dialog.close(); });

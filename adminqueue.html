@@ -430,9 +430,11 @@
       </div>
     </footer>
   </div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/db.js"></script>
 
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
       const themeToggleBtn = document.querySelector('[data-theme-toggle]');
       const htmlEl = document.documentElement;
       const savedTheme = localStorage.getItem('pf_theme') || 'dark';
@@ -447,15 +449,38 @@
         });
       }
 
-      const tickets = JSON.parse(localStorage.getItem('pf_support_tickets') || '[]');
-      const activeTicket = JSON.parse(localStorage.getItem('pf_active_ticket') || 'null');
-      const sidebarQueueBadge = document.getElementById('sidebarQueueBadge');
-      const sidebarActiveBadge = document.getElementById('sidebarActiveBadge');
-      if (sidebarQueueBadge) sidebarQueueBadge.textContent = tickets.length;
-      if (sidebarActiveBadge) sidebarActiveBadge.textContent = activeTicket ? 1 : 0;
-
       const tbody = document.getElementById('queueTableBody');
-      const esc = (v) => String(v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+      const searchInput = document.getElementById('adminSearchInput');
+      const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+      let waitingTickets = [];
+      let activeCount = 0;
+
+      async function loadQueue() {
+        const { data: allTickets, error } = await window.db
+          .from('support_tickets')
+          .select('*')
+          .in('status', ['waiting', 'active'])
+          .order('created_at', { ascending: true });
+
+        if (error) {
+          console.error('Supabase queue error:', error.message);
+          return;
+        }
+
+        waitingTickets = allTickets.filter(t => t.status === 'waiting');
+        activeCount = allTickets.filter(t => t.status === 'active').length;
+
+        document.getElementById('sidebarQueueBadge').textContent = waitingTickets.length;
+        document.getElementById('sidebarActiveBadge').textContent = activeCount;
+
+        const query = (searchInput?.value || '').toLowerCase();
+        const filtered = waitingTickets.filter(t =>
+          t.customer_name.toLowerCase().includes(query) ||
+          t.issue_summary.toLowerCase().includes(query) ||
+          t.ticket_code.toLowerCase().includes(query)
+        );
+        renderQueue(filtered);
+      }
 
       function renderQueue(items) {
         if (!tbody) return;
@@ -463,49 +488,46 @@
           tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 40px;">No tickets currently in the support queue.</td></tr>`;
           return;
         }
-        tbody.innerHTML = items.map((t, index) => `
+
+        tbody.innerHTML = items.map(t => `
           <tr>
-            <td style="font-weight: 600; color: var(--accent-blue);">${esc(t.id || 'TK-10' + index)}</td>
-            <td>${esc(t.user || t.customer || 'Customer')}</td>
-            <td>${esc(t.query || t.subject || 'Hardware assistance requested')}</td>
+            <td style="font-weight: 600; color: var(--accent-blue);">${esc(t.ticket_code)}</td>
+            <td>${esc(t.customer_name)}</td>
+            <td>${esc(t.issue_summary)}</td>
             <td>
-              <button type="button" class="btn accept-btn" data-index="${index}" style="background: var(--accent-blue); color: white; border: none; padding: 6px 14px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.85rem; box-shadow: 0 4px 12px var(--accent-blue-glow);">Accept Ticket</button>
+              <button type="button" class="btn accept-btn" data-id="${t.id}" style="background: var(--accent-blue); color: white; border: none; padding: 6px 14px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.85rem; box-shadow: 0 4px 12px var(--accent-blue-glow);">Accept Ticket</button>
             </td>
           </tr>
         `).join('');
 
         document.querySelectorAll('.accept-btn').forEach(btn => {
-          btn.addEventListener('click', (e) => {
-            const existingActiveTicket = JSON.parse(localStorage.getItem('pf_active_ticket') || 'null');
-            if (existingActiveTicket) {
+          btn.addEventListener('click', async (e) => {
+            if (activeCount > 0) {
               alert('You already have an active customer conversation. Resolve or transfer the current chat before accepting another ticket.');
               return;
             }
-            const idx = e.target.getAttribute('data-index');
-            const acceptedTicket = tickets.splice(idx, 1)[0];
-            localStorage.setItem('pf_support_tickets', JSON.stringify(tickets));
+            const ticketId = Number(e.target.getAttribute('data-id'));
+            const session = JSON.parse(localStorage.getItem('pf_session') || '{}');
 
-            const userHistory = JSON.parse(localStorage.getItem('pf_chat_history_' + acceptedTicket.userEmail) || '[]');
-            acceptedTicket.messages = userHistory;
-            localStorage.setItem('pf_active_ticket', JSON.stringify(acceptedTicket));
+            const { error } = await window.db
+              .from('support_tickets')
+              .update({ status: 'active', assigned_admin: session.name || 'System Admin' })
+              .eq('id', ticketId);
+
+            if (error) {
+              alert('Could not accept ticket: ' + error.message);
+              return;
+            }
             window.location.href = 'adminchat.html';
           });
         });
       }
 
-      renderQueue(tickets);
+      await loadQueue();
+      setInterval(loadQueue, 3000);
 
-      const searchInput = document.getElementById('adminSearchInput');
       if (searchInput) {
-        searchInput.addEventListener('input', (e) => {
-          const query = e.target.value.toLowerCase();
-          const filtered = tickets.filter(t => 
-            ((t.user || t.customer || '').toLowerCase().includes(query)) || 
-            ((t.query || t.subject || '').toLowerCase().includes(query)) ||
-            (t.id && t.id.toLowerCase().includes(query))
-          );
-          renderQueue(filtered);
-        });
+        searchInput.addEventListener('input', () => loadQueue());
       }
 
       const trigger = document.getElementById('adminProfileTrigger');

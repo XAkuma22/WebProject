@@ -553,13 +553,13 @@
       </div>
     </footer>
   </div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/db.js"></script>
 
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      // Theme Toggle Logic
+    document.addEventListener('DOMContentLoaded', async () => {
       const themeToggleBtn = document.querySelector('[data-theme-toggle]');
       const htmlEl = document.documentElement;
-      
       const savedTheme = localStorage.getItem('pf_theme') || 'dark';
       htmlEl.setAttribute('data-theme', savedTheme);
 
@@ -572,33 +572,38 @@
         });
       }
 
-      // Sync local storage data for metrics and preview queue
-      const tickets = JSON.parse(localStorage.getItem('pf_support_tickets') || '[]');
-      const resolved = JSON.parse(localStorage.getItem('pf_resolved_tickets') || '[]');
-      const activeTicket = JSON.parse(localStorage.getItem('pf_active_ticket') || 'null');
+      const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-      const metricPending = document.getElementById('metricPending');
-      const metricActiveChat = document.getElementById('metricActiveChat');
-      const metricResolved = document.getElementById('metricResolved');
-      const sidebarQueueBadge = document.getElementById('sidebarQueueBadge');
-      const sidebarActiveBadge = document.getElementById('sidebarActiveBadge');
-      const previewQueueList = document.getElementById('previewQueueList');
+      async function refreshDashboard() {
+        const { data: allTickets, error } = await window.db
+          .from('support_tickets')
+          .select('*')
+          .order('created_at', { ascending: true });
 
-      if (metricPending) metricPending.textContent = tickets.length;
-      if (metricActiveChat) metricActiveChat.textContent = activeTicket ? 1 : 0;
-      if (metricResolved) metricResolved.textContent = resolved.length;
-      if (sidebarQueueBadge) sidebarQueueBadge.textContent = tickets.length;
-      if (sidebarActiveBadge) sidebarActiveBadge.textContent = activeTicket ? 1 : 0;
+        if (error) {
+          console.error('Supabase dashboard error:', error.message);
+          return;
+        }
 
-      if (previewQueueList) {
-        if (tickets.length === 0) {
+        const pending = allTickets.filter(t => t.status === 'waiting');
+        const active = allTickets.filter(t => t.status === 'active');
+        const resolved = allTickets.filter(t => t.status === 'resolved');
+
+        document.getElementById('metricPending').textContent = pending.length;
+        document.getElementById('metricActiveChat').textContent = active.length;
+        document.getElementById('metricResolved').textContent = resolved.length;
+        document.getElementById('sidebarQueueBadge').textContent = pending.length;
+        document.getElementById('sidebarActiveBadge').textContent = active.length;
+
+        const previewQueueList = document.getElementById('previewQueueList');
+        if (pending.length === 0) {
           previewQueueList.innerHTML = `<p style="color: var(--text-muted); font-size: 0.85rem; margin: 10px 0; text-align: center; padding: 20px;">No pending tickets in the support queue.</p>`;
         } else {
-          previewQueueList.innerHTML = tickets.slice(0, 4).map(t => `
+          previewQueueList.innerHTML = pending.slice(0, 4).map(t => `
             <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 10px;">
               <div>
-                <div style="font-weight: 600; font-size: 0.85rem; color: var(--text-main);">${t.user || t.customer || 'Customer'}</div>
-                <div style="font-size: 0.75rem; color: var(--text-muted);">${t.query || t.subject || 'Support Request'}</div>
+                <div style="font-weight: 600; font-size: 0.85rem; color: var(--text-main);">${esc(t.customer_name)}</div>
+                <div style="font-size: 0.75rem; color: var(--text-muted);">${esc(t.issue_summary)}</div>
               </div>
               <a href="adminqueue.html" style="background: var(--accent-blue); color: white; padding: 5px 12px; border-radius: 6px; font-size: 0.75rem; text-decoration: none; font-weight: 600;">Review</a>
             </div>
@@ -606,24 +611,21 @@
         }
       }
 
-      // Profile dropdown toggle
+      await refreshDashboard();
+      setInterval(refreshDashboard, 4000);
+
       const trigger = document.getElementById('adminProfileTrigger');
       const dropdown = document.getElementById('adminProfileDropdown');
-
       if (trigger && dropdown) {
         trigger.addEventListener('click', (e) => {
           e.stopPropagation();
           dropdown.hidden = !dropdown.hidden;
         });
-
         document.addEventListener('click', (e) => {
-          if (!dropdown.contains(e.target) && !trigger.contains(e.target)) {
-            dropdown.hidden = true;
-          }
+          if (!dropdown.contains(e.target) && !trigger.contains(e.target)) dropdown.hidden = true;
         });
       }
 
-      // Logout handler
       const logoutBtn = document.getElementById('popoverLogoutBtn');
       if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {

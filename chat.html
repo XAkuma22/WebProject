@@ -319,6 +319,14 @@
       color: var(--accent, #0071e3) !important;
     }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+  <script src="js/db.js" defer></script>
+  <script src="js/core.js" defer></script>
+  <script src="js/catalog.js" defer></script>
+  <script src="js/layout.js" defer></script>
+  <script src="js/support.js" defer></script>
+  <script src="js/auth.js" defer></script>
+  <script src="js/main.js" defer></script>
 </head>
 <body>
 
@@ -589,545 +597,243 @@
       </div>
     </div>
   </footer>
-
   
 <script>
+document.addEventListener('DOMContentLoaded', async () => {
+  const messagesBox = document.getElementById('clientChatMessages');
+  const chatInput = document.getElementById('clientChatInput');
+  const sendBtn = document.getElementById('clientSendBtn');
+  const chatNameEl = document.querySelector('.chat-name');
+  const chatStatusEl = document.querySelector('.chat-status');
+  const chips = document.querySelectorAll('.quick-chips .chip');
 
-document.addEventListener('DOMContentLoaded', () => {
+  const session = JSON.parse(localStorage.getItem('pf_session') || 'null');
+  if (!session) return; // core.js handles redirect to Signin.html
 
-    // ==========================================
-    // USER INFORMATION
-    // ==========================================
+  let currentTicket = null;
+  let lastMessageSignature = '';
 
-    let sessionData = null;
-    try { sessionData = JSON.parse(localStorage.getItem('pf_session')); } catch (e) { /* ignore */ }
-    if (!sessionData || !sessionData.email) {
-        window.location.replace('Signin.html?reason=auth&next=chat.html');
+  const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+
+  function formatTime(iso) {
+    return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function updateHeaderStatus(ticket) {
+    if (!ticket) {
+      if (chatNameEl) chatNameEl.textContent = 'Support Assistant';
+      if (chatStatusEl) {
+        chatStatusEl.textContent = '● Online • Replies instantly';
+        chatStatusEl.style.color = '#34c759';
+      }
+      return;
+    }
+
+    if (ticket.status === 'waiting') {
+      if (chatNameEl) chatNameEl.textContent = 'Support Queue (' + ticket.ticket_code + ')';
+      if (chatStatusEl) {
+        chatStatusEl.textContent = '● Waiting for a specialist to accept...';
+        chatStatusEl.style.color = '#f59e0b';
+      }
+    } else if (ticket.status === 'active') {
+      if (chatNameEl) chatNameEl.textContent = (ticket.assigned_admin || 'Passion Fruit Specialist') + ' (' + ticket.ticket_code + ')';
+      if (chatStatusEl) {
+        chatStatusEl.textContent = '● Live Specialist Connected';
+        chatStatusEl.style.color = '#34c759';
+      }
+    }
+  }
+
+  function renderBubble(senderRole, senderName, text, timestamp) {
+    const isCustomer = senderRole === 'customer';
+    const wrapper = document.createElement('div');
+    wrapper.style.display = 'flex';
+    wrapper.style.flexDirection = 'column';
+    wrapper.style.alignItems = isCustomer ? 'flex-end' : 'flex-start';
+
+    if (!isCustomer && senderName) {
+      const label = document.createElement('span');
+      label.textContent = senderName;
+      label.style.fontSize = '0.72rem';
+      label.style.fontWeight = '600';
+      label.style.color = 'var(--text-secondary)';
+      label.style.margin = '0 6px 3px';
+      wrapper.appendChild(label);
+    }
+
+    const bubble = document.createElement('div');
+    bubble.className = isCustomer ? 'bubble user' : 'bubble assistant';
+    bubble.style.maxWidth = '78%';
+    bubble.style.padding = '12px 16px';
+    bubble.style.borderRadius = '16px';
+    bubble.style.background = isCustomer ? 'var(--accent, #0071e3)' : 'var(--bg, #161b26)';
+    bubble.style.color = isCustomer ? '#ffffff' : 'var(--text)';
+    bubble.style.border = isCustomer ? 'none' : '1px solid var(--border)';
+    bubble.style.fontSize = '0.92rem';
+    bubble.style.lineHeight = '1.45';
+    bubble.style.whiteSpace = 'pre-wrap';
+    bubble.style.overflowWrap = 'anywhere';
+    bubble.textContent = text;
+    wrapper.appendChild(bubble);
+
+    if (timestamp) {
+      const timeEl = document.createElement('span');
+      timeEl.textContent = formatTime(timestamp);
+      timeEl.style.fontSize = '0.7rem';
+      timeEl.style.color = 'var(--text-secondary)';
+      timeEl.style.margin = '4px 6px 0';
+      wrapper.appendChild(timeEl);
+    }
+
+    return wrapper;
+  }
+
+  // 1. Check if this logged-in customer already has an open ('waiting' or 'active') ticket
+  async function loadOpenTicket() {
+    const { data, error } = await window.db
+      .from('support_tickets')
+      .select('*')
+      .ilike('customer_email', session.email)
+      .in('status', ['waiting', 'active'])
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!error && data) {
+      currentTicket = data;
+      updateHeaderStatus(currentTicket);
+      await syncMessages();
+    }
+  }
+
+  // 2. Poll Supabase for new messages & ticket status changes
+  async function syncMessages() {
+    if (!currentTicket) return;
+
+    // Check if ticket status changed (e.g., waiting -> active, or resolved)
+    const { data: freshTicket } = await window.db
+      .from('support_tickets')
+      .select('*')
+      .eq('id', currentTicket.id)
+      .maybeSingle();
+
+    if (freshTicket) {
+      if (freshTicket.status === 'resolved') {
+        const closedCode = freshTicket.ticket_code;
+        currentTicket = null;
+        lastMessageSignature = '';
+        updateHeaderStatus(null);
+
+        const notice = renderBubble(
+          'admin',
+          'System',
+          `Ticket ${closedCode} has been marked as resolved by our specialist. Send a new message anytime if you need more help!`,
+          new Date().toISOString()
+        );
+        messagesBox.appendChild(notice);
+        messagesBox.scrollTop = messagesBox.scrollHeight;
         return;
-    }
-    const userEmail = sessionData.email;
-    const userName = sessionData.name || sessionData.email;
-
-    const historyKey = `pf_chat_history_${userEmail}`;
-    const resolvedKey = `pf_session_resolved_${userEmail}`;
-    const awaitingKey = `pf_awaiting_agent_${userEmail}`;
-    const ackKey = `pf_chat_ack_${userEmail}`;
-
-    const chatMessages = document.getElementById('clientChatMessages');
-    const chatInput = document.getElementById('clientChatInput');
-    const sendBtn = document.getElementById('clientSendBtn');
-    const chatFooter = document.getElementById('chatFooterArea');
-
-    if (!chatMessages || !chatInput || !sendBtn) return;
-
-    let savedHistory = getJSON(historyKey, []);
-    let responsePending = false;
-    let awaitingAgentConfirmation = localStorage.getItem(awaitingKey) === 'true';
-    let isResolved = false;
-    let lastRenderSig = '';
-    let activeTicket = getActiveTicket();
-
-    // ==========================================
-    // STORAGE FUNCTIONS
-    // ==========================================
-
-    function getJSON(key, fallback = []) {
-        try {
-            return JSON.parse(localStorage.getItem(key)) ?? fallback;
-        } catch (error) {
-            return fallback;
-        }
+      }
+      currentTicket = freshTicket;
+      updateHeaderStatus(currentTicket);
     }
 
-    function saveHistory() {
-        localStorage.setItem(historyKey, JSON.stringify(savedHistory));
-    }
-
-    function getActiveTicket() {
-        const ticket = getJSON('pf_active_ticket', null);
-
-        if (
-            ticket &&
-            ticket.userEmail &&
-            ticket.userEmail.toLowerCase() === userEmail.toLowerCase()
-        ) {
-            return ticket;
-        }
-
-        return null;
-    }
-
-    function saveActiveTicket(ticket) {
-        localStorage.setItem('pf_active_ticket', JSON.stringify(ticket));
-        activeTicket = ticket;
-    }
-
-    // ==========================================
-    // MESSAGE DISPLAY
-    // ==========================================
-
-    function createMessage(text, sender, timestamp = null) {
-        const message = document.createElement('div');
-
-        const isUser = sender === 'user' || sender === 'customer';
-        const isAdmin = sender === 'admin';
-
-        message.style.background = isUser
-            ? 'var(--accent)'
-            : 'var(--bg)';
-
-        message.style.color = isUser ? '#fff' : 'var(--text)';
-        message.style.padding = '12px 16px';
-        message.style.borderRadius = '12px';
-        message.style.border = '1px solid var(--border)';
-        message.style.maxWidth = '85%';
-        message.style.alignSelf = isUser ? 'flex-end' : 'flex-start';
-        message.style.boxSizing = 'border-box';
-        message.style.overflowWrap = 'anywhere';
-
-        const paragraph = document.createElement('p');
-        paragraph.style.margin = '0';
-        paragraph.style.fontSize = '0.9rem';
-        paragraph.style.lineHeight = '1.5';
-        paragraph.textContent = text;
-
-        message.appendChild(paragraph);
-
-        if (timestamp) {
-            const time = document.createElement('small');
-            time.textContent = new Date(timestamp).toLocaleTimeString([], {
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-            time.style.display = 'block';
-            time.style.marginTop = '5px';
-            time.style.opacity = '0.7';
-            message.appendChild(time);
-        }
-
-        chatMessages.appendChild(message);
-    }
-
-    function sameUser(t) {
-        return !!(t && t.userEmail && t.userEmail.toLowerCase() === userEmail.toLowerCase());
-    }
-
-    // Ticket waiting in the queue (created, not yet accepted by an admin)
-    function getPendingTicket() {
-        return getJSON('pf_support_tickets', []).find(sameUser) || null;
-    }
-
-    // Latest resolved ticket the customer has not dismissed yet
-    function getClosedTicket() {
-        const ack = localStorage.getItem(ackKey);
-        const list = getJSON('pf_resolved_tickets', [])
-            .filter(t => sameUser(t) && t.status === 'Resolved');
-        const last = list[list.length - 1];
-        return last && last.id !== ack ? last : null;
-    }
-
-    function renderHistory(force) {
-        const ticket = getActiveTicket() || getClosedTicket();
-        const messages = ticket ? (ticket.messages || []) : savedHistory;
-
-        // Only redraw when something changed (keeps scroll position stable)
-        const sig = messages.length + '|' + messages.map(m => (m && (m.id || m.text)) || '').join('|');
-        if (!force && sig === lastRenderSig) return;
-        lastRenderSig = sig;
-
-        chatMessages.replaceChildren();
-
-        if (!messages.length) {
-            createMessage(
-                "Hello! How can I help you with your Passion Fruit device today?",
-                'assistant'
-            );
-            return;
-        }
-
-        messages.forEach(msg => {
-            if (!msg || typeof msg.text !== 'string') return;
-
-            createMessage(
-                msg.text,
-                msg.sender || 'assistant',
-                msg.timestamp || msg.time || null
-            );
-        });
-
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
-
-    // ==========================================
-    // SYNC WITH ADMIN (accepted / replied / resolved)
-    // ==========================================
-
-    function checkActiveTicket() {
-        const ticket = getActiveTicket();
-
-        if (ticket) {
-            activeTicket = ticket;
-            if (!Array.isArray(ticket.messages)) ticket.messages = [];
-            renderHistory();
-            return;
-        }
-
-        activeTicket = null;
-
-        if (getClosedTicket()) {
-            closeChat();
-            return;
-        }
-
-        renderHistory();
-    }
-
-    // ==========================================
-    // SEND CUSTOMER MESSAGE
-    // ==========================================
-
-    function appendMessage(text, sender) {
-        if (isResolved) return false;
-
-        const message = {
-            id: 'msg-' + Date.now() + Math.random(),
-            sender: sender,
-            text: String(text),
-            timestamp: new Date().toISOString()
-        };
-
-        // If an admin has accepted the ticket, use shared ticket messages.
-        const latestTicket = getActiveTicket();
-
-        if (latestTicket) {
-            activeTicket = latestTicket;
-
-            if (!Array.isArray(activeTicket.messages)) {
-                activeTicket.messages = [];
-            }
-
-            activeTicket.messages.push(message);
-            saveActiveTicket(activeTicket);
-            renderHistory();
-
-            return true;
-        }
-
-        // Before acceptance, save the conversation locally.
-        savedHistory.push({
-            text: message.text,
-            sender: sender === 'customer' ? 'user' : sender,
-            time: message.timestamp
-        });
-
-        saveHistory();
-        renderHistory();
-
-        return true;
-    }
-
-    // ==========================================
-    // CLOSE CHAT
-    // ==========================================
-
-    function closeChat() {
-        if (isResolved && chatFooter && chatFooter.querySelector('.chat-closed')) return;
-        isResolved = true;
-
-        chatInput.disabled = true;
-        sendBtn.disabled = true;
-        renderHistory(true);
-
-        if (chatFooter) {
-            chatFooter.replaceChildren();
-
-            const notice = document.createElement('div');
-            notice.className = 'chat-closed';
-            notice.textContent =
-                'This support session has been resolved and closed by the administrator.';
-
-            const restart = document.createElement('button');
-            restart.type = 'button';
-            restart.className = 'btn btn--primary';
-            restart.textContent = 'Start a new conversation';
-            restart.style.marginTop = '12px';
-            restart.addEventListener('click', () => {
-                const closed = getClosedTicket();
-                if (closed) localStorage.setItem(ackKey, closed.id);
-                localStorage.removeItem(historyKey);
-                localStorage.removeItem(awaitingKey);
-                window.location.reload();
-            });
-
-            notice.appendChild(restart);
-            chatFooter.appendChild(notice);
-        }
-    }
-
-    // ==========================================
-    // CREATE SUPPORT TICKET
-    // ==========================================
-
-    function createTicket() {
-        const tickets = getJSON('pf_support_tickets', []);
-
-        const ticketId = 'KB-TICK-' +
-            Math.floor(1000 + Math.random() * 9000);
-
-        // Keep the customer's earlier messages with the ticket.
-        const ticketMessages = savedHistory
-            .filter(msg => msg.sender === 'user')
-            .map(msg => ({
-                id: 'customer-' + Date.now() + Math.random(),
-                sender: 'customer',
-                text: msg.text,
-                timestamp: msg.time || new Date().toISOString()
-            }));
-
-    const ticket = {
-    id: ticketId,
-    user: userName,
-    userEmail: userEmail,
-
-    // Save the customer's actual issue
-    query: ticketMessages.length
-        ? ticketMessages[ticketMessages.length - 1].text
-        : 'General Support Request',
-
-    time: new Date().toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit'
-    }),
-
-    status: 'Waiting for Agent',
-
-    messages: ticketMessages
-};
-        tickets.push(ticket);
-
-        localStorage.setItem('pf_support_tickets', JSON.stringify(tickets));
-
-        return ticketId;
-    }
-
-    // ==========================================
-    // AUTOMATED RESPONSE
-    // ==========================================
-
-    function generateResponse(message) {
-        const text = message.toLowerCase().trim();
-
-        if (awaitingAgentConfirmation) {
-            if (['yes', 'yeah', 'yep', 'sure', 'ok', 'okay'].includes(text)) {
-                awaitingAgentConfirmation = false;
-                localStorage.setItem(awaitingKey, 'false');
-
-                const ticketId = createTicket();
-
-                return ticketId
-                    ? `Support ticket ${ticketId} has been created. A support specialist will join the conversation shortly.`
-                    : 'Sorry, I could not create your support ticket.';
-            }
-
-            if (['no', 'nope', 'nah'].includes(text)) {
-                awaitingAgentConfirmation = false;
-                localStorage.setItem(awaitingKey, 'false');
-
-                return 'No problem! Let me know what issue you are having.';
-            }
-
-            return 'Please reply Yes to create a support ticket or No to continue troubleshooting.';
-        }
-
-        if (/^(hi|hello|hey|good morning|good afternoon|good evening)\b/.test(text)) {
-            return 'Hello! Welcome to Passion Fruit Support. What device or issue can I help you troubleshoot today?';
-        }
-
-        if (text.includes('battery') || text.includes('draining')) {
-            return 'Battery drain can be caused by background applications, high screen brightness, or battery wear. Check Settings > Battery Health.';
-        }
-
-        if (text.includes('passcode') || text.includes('password') || text.includes('unlock')) {
-            return 'If you forgot your device passcode, you may need to use Recovery Mode. Please remember that restoring your device can erase its data.';
-        }
-
-        if (text.includes('face id')) {
-            return 'Try cleaning the camera and sensor area. You can also try setting up Face ID again.';
-        }
-
-        if (text.includes('wifi') || text.includes('wi-fi')) {
-            return 'Try restarting your router and toggling Airplane Mode. If the issue continues, try resetting your network settings.';
-        }
-
-        if (
-            text.includes('agent') ||
-            text.includes('human') ||
-            text.includes('specialist') ||
-            text.includes('representative')
-        ) {
-            awaitingAgentConfirmation = true;
-            localStorage.setItem(awaitingKey, 'true');
-
-            return 'I can connect you to a live support specialist. Would you like me to create a support ticket? Please reply Yes or No.';
-        }
-
-        if (text.includes('charge') || text.includes('charging')) {
-            return 'Check your charging cable, adapter, and charging port. Try another compatible charger.';
-        }
-
-        if (text.includes('overheat') || text.includes('hot')) {
-            return 'Overheating can be caused by demanding applications or background activity. Close unnecessary apps and allow your device to cool down.';
-        }
-
-        if (text.length < 3) {
-            return 'I could not understand your message. Please describe the issue you are experiencing.';
-        }
-
-        return 'Can you provide more details about the issue? Please include your device model and what happened before the problem started.';
-    }
-
-    // ==========================================
-    // SEND BUTTON
-    // ==========================================
-
-    function sendMessage() {
-        if (isResolved || responsePending) return;
-
-        // Refresh ticket status before sending.
-        checkActiveTicket();
-
-        const message = chatInput.value.trim();
-
-        if (!message || message.length > 1000) return;
-
-        chatInput.value = '';
-
-        // Once an admin accepts, send directly to the admin.
-        if (getActiveTicket()) {
-            appendMessage(message, 'customer');
-            return;
-        }
-
-        appendMessage(message, 'user');
-
-        // Ticket already queued: forward the message to it instead of re-running the bot
-        const pending = getPendingTicket();
-        if (pending) {
-            const queue = getJSON('pf_support_tickets', []);
-            const queued = queue.find(t => t.id === pending.id);
-            if (queued) {
-                if (!Array.isArray(queued.messages)) queued.messages = [];
-                queued.messages.push({
-                    id: 'customer-' + Date.now() + Math.random(),
-                    sender: 'customer',
-                    text: message,
-                    timestamp: new Date().toISOString()
-                });
-                localStorage.setItem('pf_support_tickets', JSON.stringify(queue));
-            }
-        }
-
-        responsePending = true;
-        sendBtn.disabled = true;
-        chatInput.disabled = true;
-
-        setTimeout(() => {
-            if (isResolved) return;
-
-            // Do not generate automated replies after admin acceptance.
-            if (getActiveTicket()) {
-                responsePending = false;
-                checkActiveTicket();
-                sendBtn.disabled = false;
-                chatInput.disabled = false;
-                return;
-            }
-
-            const waiting = getPendingTicket();
-            const reply = waiting
-                ? `Your ticket ${waiting.id} is in the queue. A specialist will reply here shortly.`
-                : generateResponse(message);
-            appendMessage(reply, 'assistant');
-
-            responsePending = false;
-            sendBtn.disabled = false;
-            chatInput.disabled = false;
-            chatInput.focus();
-
-        }, 1000);
-    }
-
-    // ==========================================
-    // INITIALIZE
-    // ==========================================
-
-    renderHistory(true);
-    checkActiveTicket();
-
-    sendBtn.addEventListener('click', sendMessage);
-
-    chatInput.addEventListener('keydown', event => {
-        if (event.key === 'Enter' && !event.shiftKey) {
-            event.preventDefault();
-            sendMessage();
-        }
+    const { data: msgs, error } = await window.db
+      .from('chat_messages')
+      .select('*')
+      .eq('ticket_id', currentTicket.id)
+      .order('sent_at', { ascending: true });
+
+    if (error || !msgs) return;
+
+    const sig = msgs.map(m => m.id).join('|');
+    if (sig === lastMessageSignature) return;
+
+    messagesBox.innerHTML = '';
+    messagesBox.appendChild(
+      renderBubble('admin', 'Support Assistant', 'Hello! How can I help you with your Passion Fruit device today?', null)
+    );
+
+    msgs.forEach(m => {
+      messagesBox.appendChild(renderBubble(m.sender_role, m.sender_name, m.message_text, m.sent_at));
     });
 
-    // ==========================================
-    // QUICK REPLY CHIPS
-    // ==========================================
+    lastMessageSignature = sig;
+    messagesBox.scrollTop = messagesBox.scrollHeight;
+  }
 
-    document.querySelectorAll('.chip').forEach(chip => {
-        chip.addEventListener('click', () => {
-            if (isResolved || responsePending) return;
+  // 3. Send message (creates a support ticket first if none is active)
+  async function handleSend(customText) {
+    const text = (typeof customText === 'string' ? customText : chatInput.value).trim();
+    if (!text) return;
 
-            chatInput.value = 'I need help with: ' + chip.textContent.trim();
-            sendMessage();
-        });
-    });
+    chatInput.value = '';
+    sendBtn.disabled = true;
 
-    document.querySelectorAll('[data-q]').forEach(button => {
-        button.addEventListener('click', () => {
-            if (isResolved || responsePending) return;
+    try {
+      if (!currentTicket) {
+        const randomCode = 'KB-TICK-' + Math.floor(1000 + Math.random() * 9000);
+        const { data: newTicket, error: ticketErr } = await window.db
+          .from('support_tickets')
+          .insert([{
+            ticket_code: randomCode,
+            user_id: session.id || null,
+            customer_name: session.name || session.firstName || 'Customer',
+            customer_email: session.email,
+            issue_summary: text.slice(0, 140),
+            status: 'waiting'
+          }])
+          .select()
+          .single();
 
-            chatInput.value = button.dataset.q;
-            sendMessage();
-        });
-    });
-
-    // ==========================================
-    // UPDATE WHEN ADMIN SENDS A MESSAGE
-    // ==========================================
-
-    window.addEventListener('storage', event => {
-        if (
-            event.key === 'pf_active_ticket' ||
-            event.key === 'pf_resolved_tickets'
-        ) {
-            checkActiveTicket();
+        if (ticketErr) {
+          alert('Could not start support ticket: ' + ticketErr.message);
+          return;
         }
+        currentTicket = newTicket;
+        updateHeaderStatus(currentTicket);
+      }
+
+      const { error: msgErr } = await window.db
+        .from('chat_messages')
+        .insert([{
+          ticket_id: currentTicket.id,
+          sender_role: 'customer',
+          sender_name: session.name || session.firstName || 'Customer',
+          message_text: text
+        }]);
+
+      if (msgErr) {
+        alert('Could not send message: ' + msgErr.message);
+        return;
+      }
+
+      await syncMessages();
+    } finally {
+      sendBtn.disabled = false;
+      chatInput.focus();
+    }
+  }
+
+  sendBtn.addEventListener('click', () => handleSend());
+  chatInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  });
+
+  chips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      handleSend(chip.textContent.trim());
     });
+  });
 
-    // Polling also catches changes made by other tabs.
-    setInterval(() => {
-        if (!isResolved) {
-            checkActiveTicket();
-        }
-    }, 1000);
-
-    // ==========================================
-    // LOGOUT
-    // ==========================================
-
-    document.querySelectorAll('[data-action="logout"]').forEach(button => {
-        button.addEventListener('click', () => {
-            localStorage.removeItem('pf_session');
-            window.location.href = 'Signin.html';
-        });
-    });
-
+  await loadOpenTicket();
+  setInterval(syncMessages, 1500);
 });
-
 </script>
 
 </body>
