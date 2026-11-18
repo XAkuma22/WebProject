@@ -142,10 +142,14 @@
           }
 
           // Save session to localStorage
+          // Save session to localStorage (including middle name)
+          const fullName = [user.first_name, user.middle_name, user.last_name].filter(Boolean).join(' ');
           store.set(KEYS.session, {
             id: user.id,
-            name: (user.first_name + ' ' + user.last_name).trim(),
+            name: fullName,
             firstName: user.first_name,
+            middleName: user.middle_name,
+            lastName: user.last_name,
             email: user.email,
             role: user.role || 'customer'
           });
