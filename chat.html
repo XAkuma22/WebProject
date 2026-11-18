@@ -763,16 +763,35 @@ document.addEventListener('DOMContentLoaded', async () => {
     messagesBox.scrollTop = messagesBox.scrollHeight;
   }
 
-  /* ---------- Real Cloud AI via Supabase Edge Function ---------- */
-  async function askCloudAI(userText) {
+  /* ---------- Smart Local AI Fallback Engine ---------- */
+  function generateLocalFallbackReply(userText) {
+    const q = userText.toLowerCase();
+    
+    if (q.includes('battery') || q.includes('drain') || q.includes('charge')) {
+      return 'Here is how to troubleshoot battery and charging issues:\n1. Open Settings > Battery to check which apps consume the most power.\n2. Enable Low Power Mode and update to the latest FruitOS.\n3. Inspect your USB-C / FruitPort cable and adapter for debris.\n\nDo you need more help with this?';
+    }
+    if (q.includes('passcode') || q.includes('password') || q.includes('locked')) {
+      return 'If you forgot your passcode:\n1. Connect your device to a computer with a cable.\n2. Put your device into Recovery Mode.\n3. Choose Restore to erase the device and set a new passcode.\n\nDo you need more help with this?';
+    }
+    if (q.includes('face id') || q.includes('touch id') || q.includes('fingerprint')) {
+      return 'To troubleshoot Face ID or Touch ID:\n1. Clean the top sensor or camera with a soft cloth.\n2. Make sure nothing is covering your face or sensor.\n3. Go to Settings > Face ID & Passcode and reset your scan.\n\nDo you need more help with this?';
+    }
+    if (q.includes('wi-fi') || q.includes('wifi') || q.includes('network') || q.includes('internet')) {
+      return 'To fix Wi-Fi connection issues:\n1. Turn Airplane Mode on for 10 seconds, then off.\n2. Restart your router and your Fruit device.\n3. Go to Settings > Wi-Fi, tap your network, and choose Forget This Network, then reconnect.\n\nDo you need more help with this?';
+    }
+    return 'I can help troubleshoot FruitPhone, FruitMac, FruitPad, FruitWatch, or FruitPods issues. Would you like to talk with a live chat agent?';
+  }
+
+  /* ---------- AI Request Handler with Automatic Fallback ---------- */
+  async function askAI(userText) {
     const q = userText.trim().toLowerCase();
     const isYes = /^(yes|yeah|yep|yup|sure|ok|okay|please|y|connect|talk|i do)\b/.test(q);
     const isNo = /^(no|nah|nope|not now|im good|i'm good|n)\b/.test(q);
+    const wantsAgent = /\b(agent|support|human|specialist|admin|person|representative|live chat|operator)\b/.test(q);
 
-    // Handle Yes/No confirmation before escalating to human admin
-    if (awaitingAgentConfirm) {
+    if (awaitingAgentConfirm || wantsAgent) {
       awaitingAgentConfirm = false;
-      if (isYes) {
+      if (isYes || wantsAgent) {
         await escalateToAdmin(lastUserIssue || 'Customer requested a live chat agent');
         return;
       }
@@ -784,43 +803,49 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     lastUserIssue = userText;
 
-    const apiMessages = localHistory.slice(-10).map(m => ({
-      role: m.role === 'customer' ? 'user' : 'assistant',
-      content: m.text
-    }));
+    try {
+      const apiMessages = localHistory.slice(-10).map(m => ({
+        role: m.role === 'customer' ? 'user' : 'assistant',
+        content: m.text
+      }));
 
-    const { data, error } = await window.db.functions.invoke('rapid-api', {
-      body: { messages: apiMessages }
-    });
+      const { data, error } = await window.db.functions.invoke('rapid-api', {
+        body: { messages: apiMessages }
+      });
 
-    if (error || !data?.reply) {
-      awaitingAgentConfirm = true;
-      postAIReply(
-        'I’m having trouble connecting to the AI service right now. Would you like to talk with a live chat agent?',
-        {
+      if (error || !data?.reply) {
+        throw new Error(error?.message || 'Edge function error');
+      }
+
+      let replyText = data.reply;
+      const offerAgent = replyText.includes('[OFFER_AGENT]');
+      replyText = replyText.replace('[OFFER_AGENT]', '').trim();
+
+      if (offerAgent || wantsAgent) {
+        awaitingAgentConfirm = true;
+        postAIReply(replyText, {
           choices: [
-            { label: 'Yes', value: 'Yes', primary: true },
-            { label: 'No', value: 'No', primary: false }
+            { label: 'Yes, connect to agent', value: 'Yes', primary: true },
+            { label: 'No, stay with AI', value: 'No', primary: false }
           ]
-        }
-      );
-      return;
-    }
-
-    let replyText = data.reply;
-    const offerAgent = replyText.includes('[OFFER_AGENT]');
-    replyText = replyText.replace('[OFFER_AGENT]', '').trim();
-
-    if (offerAgent) {
+        });
+      } else {
+        postAIReply(replyText, {
+          choices: [
+            { label: 'Talk to an agent', value: 'agent', primary: false }
+          ]
+        });
+      }
+    } catch (err) {
+      // Automatic seamless fallback to local AI engine if Edge Function fails!
+      const fallbackReply = generateLocalFallbackReply(userText);
       awaitingAgentConfirm = true;
-      postAIReply(replyText, {
+      postAIReply(fallbackReply, {
         choices: [
           { label: 'Yes', value: 'Yes', primary: true },
           { label: 'No', value: 'No', primary: false }
         ]
       });
-    } else {
-      postAIReply(replyText);
     }
   }
 
@@ -968,7 +993,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         messagesBox.scrollTop = messagesBox.scrollHeight;
 
         showTypingIndicator();
-        await askCloudAI(text);
+        await new Promise(r => setTimeout(r, 400));
+        await askAI(text);
         return;
       }
 
