@@ -317,7 +317,8 @@
     const backLink = document.querySelector('.content-back a, .back-link');
     if (!backLink) return;
     backLink.addEventListener('click', (e) => {
-      if (document.referrer && document.referrer.includes(window.location.hostname)) {
+      // Only go back when this tab actually has history (a link opened in a new tab has none)
+      if (history.length > 1 && document.referrer && document.referrer.includes(window.location.hostname)) {
         e.preventDefault();
         history.back();
       }

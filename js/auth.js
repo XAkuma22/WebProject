@@ -277,6 +277,7 @@
 
           setStatus(status, 'Account created successfully. Redirecting…', 'success');
           success = true;
+          window.dispatchEvent(new Event('pf:signup-success')); // clears the saved sign-up draft
           setTimeout(() => {
             window.location.href = 'Signin.html' + (next ? '?next=' + encodeURIComponent(next) : '');
           }, 900);
